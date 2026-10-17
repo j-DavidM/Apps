@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apps</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f6f5f2;
+      --fg: #1c1b19;
+      --muted: #5c5852;
+      --line: #ddd9d2;
+      --card: #fff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #141413;
+        --fg: #f3f1ec;
+        --muted: #a8a39a;
+        --line: #2c2b29;
+        --card: #1c1c1a;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+      background: var(--bg);
+      color: var(--fg);
+    }
+    main {
+      max-width: 36rem;
+      margin: 0 auto;
+      padding: 4.5rem 1.5rem 3rem;
+    }
+    h1 {
+      margin: 0 0 0.4rem;
+      font-size: 2rem;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+    }
+    p {
+      margin: 0 0 2rem;
+      color: var(--muted);
+      font-family: system-ui, sans-serif;
+      font-size: 0.95rem;
+    }
+    ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      border-top: 1px solid var(--line);
+    }
+    li { border-bottom: 1px solid var(--line); }
+    a {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1rem;
+      padding: 1rem 0.15rem;
+      color: inherit;
+      text-decoration: none;
+    }
+    a:hover span:first-child { text-decoration: underline; text-underline-offset: 0.18em; }
+    a span:last-child {
+      font-family: system-ui, sans-serif;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Apps</h1>
+    <p>Four single-file pages.</p>
+    <ul>
+      <li><a href="marble-run/"><span>Marble Run</span><span>marble-run/</span></a></li>
+      <li><a href="lofi-airports/"><span>Lofi Airports</span><span>lofi-airports/</span></a></li>
+      <li><a href="lax-ramp/"><span>LAX Ramp</span><span>lax-ramp/</span></a></li>
+      <li><a href="launch-site/"><span>Launch Site</span><span>launch-site/</span></a></li>
+    </ul>
+  </main>
+</body>
+</html>
