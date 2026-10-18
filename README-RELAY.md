@@ -162,3 +162,15 @@ serves everything else statically from the root.
 - `RELAY_CACHE_MS=300 RELAY_STALE_MS=1500 node test/stale.test.mjs`
 - `node test/browser.test.mjs` → `test/results-browser.json`. Needs the harness on :3999 and
   `python3 -m http.server 4300 --bind 0.0.0.0` in this folder.
+
+## GET /api/traffic (Yardline v3 live traffic)
+
+SoCal freeway conditions for Yardline's regional map. Takes no query parameters (any parameter → 400).
+
+- Sources (all keyless): Caltrans CWWP2 lane closures (LCS) and changeable message signs (CMS) for districts 7, 8, 11 and 12, D12 travel times (TT), and CHP CAD incidents (`media.chp.ca.gov/sa_xml/sa.xml`, SoCal centers LACC OCCC INCC BSCC BCCC VTCC ICCC, inside a SoCal bbox).
+- Response: `corridors` for I-5, I-405, SR-91, SR-60, I-10, I-15, I-215, SR-55 (`closures`, `incidents`, `signs`, `ttRatio`, `level` 0..1), `incidents` (sorted by severity, max 400), `sources` (per-source ok/ms/count), `fetchedAt`, `cached`, `stale`, `ageMs`.
+- Same pattern as metar.js: CORS allowlist from `_lib/relay.js`, 3 min in-memory cache (`TRAFFIC_CACHE_MS`) with in-flight coalescing, CDN `s-maxage=180, stale-while-revalidate=300`; partial upstream failure still returns 200 and lists the failed sources; if every source fails, the last good copy younger than `TRAFFIC_STALE_MS` (30 min) is served with `stale:true` and `no-store`, otherwise 503.
+- Timeout per upstream `TRAFFIC_TIMEOUT_MS` (9 s; the D7 lane-closure file is ~14 MB). Mocks: `CWWP2_BASE`, `CHP_URL`.
+- Tests: `node test/traffic.test.mjs` (fixtures in test/fixtures/traffic/, plus a real-upstream sample).
+- Client: Yardline calls `https://apps-pi-sandy.vercel.app/api/traffic`; until this is deployed it gets 404 and shows the SIM badge (simulated traffic). NEEDS DEPLOY (by CoS).
+- r2 (2026-10-18): CHP rewrites sa.xml every few seconds, and a read during the write returns a truncated file (seen: 233,472 B, no `</State>`, Last-Modified 17 h old, served by one backend for minutes at a time) that parsed as 0 incidents. A file without `</State>` now counts as a failure: the relay retries up to 3 times, 1.2 s apart (`TRAFFIC_CHP_RETRY_MS`), then marks `chp-cad` `ok:false, error:"chp: truncated feed"`. Every source also keeps a last good copy (≤ `TRAFFIC_STALE_MS`): a failed source reuses its last items and reports `lastGoodAgeMs`, while staying `ok:false`.
