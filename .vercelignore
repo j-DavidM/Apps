@@ -1,0 +1,6 @@
+# relay dev/test files are not part of the deployed site
+test/
+shots/
+PROGRESS.md
+LOFI-PATCH.md
+lofi-patch/
