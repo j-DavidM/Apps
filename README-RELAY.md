@@ -9,6 +9,8 @@ The same repo keeps serving every app folder statically, on GitHub Pages and on 
 |---|---|
 | `api/lax.js` | `GET /api/lax`: LAX feed, same JSON as lax-flights `server.mjs` |
 | `api/adsb.js` | `GET /api/adsb`: any point or box (Lofi Airports, future apps) |
+| `api/metar.js` | `GET /api/metar?icao=KJFK`: latest METAR from aviationweather.gov (Lofi Airports weather) |
+| `api/route.js` | `GET /api/route?callsign=UAL1`: a flight's route (origin → destination) from adsbdb, with adsb.lol's routeset as the fallback (Lofi Airports flight card) |
 | `api/_lib/relay.js` | shared logic (upstreams, cache, CORS, shape conversion). `_` folder = not a route |
 | `vercel.json` | `maxDuration: 30` s for `api/*.js` (worst case 4 × 6 s timeouts) |
 | `.vercelignore` | keeps `test/`, `shots/` and `PROGRESS.md` out of deployments |
@@ -41,13 +43,40 @@ Errors carry `no-store`.
 - Coordinates are quantized to 0.01° (about 1 km), so nearby requests share one cache entry. The cache holds at most 64 areas.
 - An area with no traffic returns 200 `count:0`, but only after every source was asked.
 
+**`GET /api/metar?icao=XXXX`** (added wx-r1 for Lofi Airports' live weather)
+- `icao` must be exactly 4 letters (case-insensitive) and is the only parameter accepted. Anything else returns **400**.
+- Fetches `https://aviationweather.gov/api/data/metar?ids=XXXX&format=json`, a public API with no key and no CORS headers.
+  The URL is built only from the validated ICAO, and redirects are refused.
+- Returns 200 `{ icao, source:'aviationweather.gov', fetchedAt, ageMs, cached, stale, metar:{ icaoId, obsTime, rawOb, wdir,
+  wspd, wgst, visib, wxString, cover, clouds, temp, dewp, altim, fltCat, name, lat, lon, elev, … } }`. Only whitelisted fields are passed on.
+- Caching: 5 min in memory per instance (`METAR_CACHE_MS`), with concurrent calls coalesced. The CDN uses `s-maxage=300, stale-while-revalidate=600`.
+- If the upstream fails, the last good METAR is served marked `stale:true` (`no-store`) for up to 3 h (`METAR_STALE_MS`). After that it returns 503.
+- A station with no current METAR returns **404**. The CORS allowlist is the same as the other endpoints.
+- Tests: `node test/metar.test.mjs`, which covers the real upstream plus a mocked one. Results go to `test/results-metar.json`.
+
+**`GET /api/route?callsign=XXX`** (added wx-r1 for the Lofi Airports flight card)
+- `callsign` must be 3–8 letters/digits starting with a letter (case-insensitive) and is the only parameter accepted. Anything else returns **400**.
+- Asks adsbdb (`https://api.adsbdb.com/v0/callsign/<CS>`) first. When adsbdb doesn't know the callsign, it POSTs to adsb.lol's routeset
+  (`https://api.adsb.lol/api/0/routeset`, then its twin `https://adsb.im/api/0/routeset`, because api.adsb.lol sometimes answers an empty 201).
+  The URLs and the POST body are built only from the validated callsign; redirects are refused. `ROUTESET_URLS` overrides the list.
+- Returns 200 `{ callsign, source:'adsbdb'|'adsb.lol', fetchedAt, ageMs, cached, stale, route:{ callsign, flight, airline,
+  origin:{ iata, icao, city, name, country }, destination:{ … } } }`.
+- Caching: 6 h in memory per instance (`ROUTE_CACHE_MS`), with concurrent calls coalesced; CDN `s-maxage=21600`. Unknown callsigns return
+  **404** and are remembered for 1 h (`ROUTE_MISS_MS`, CDN `s-maxage=3600`).
+- If every source fails, the last good route is served marked `stale:true` (`no-store`) for up to 24 h (`ROUTE_STALE_MS`). After that, or
+  for a callsign never seen, it returns 503 (an outage is never cached as a miss). Same CORS allowlist as the other endpoints.
+- Tests: `node test/route.test.mjs` (real upstreams + mocked ones). Results go to `test/results-route.json`.
+
 **Upstream order:** adsb.fi → adsb.lol → airplanes.live → OpenSky (anonymous). Each source gets a 6 s timeout, and an empty or
 failed answer falls through to the next. There's an 8 s in-memory cache per instance, concurrent requests are coalesced, and the
 Vercel CDN absorbs the rest. Requests carry `User-Agent: j-davidm-apps-adsb-relay/1.0 (+https://j-davidm.github.io/Apps/; …)`.
 Upstream URLs are built only from validated numbers, so no caller-supplied URL is ever fetched and redirects are refused. No API keys are used.
 
 **CORS** (allowlist in `api/_lib/relay.js`, env read on every request):
-- Always allowed: `https://j-davidm.github.io`, and `http://localhost[:port]` / `http://127.0.0.1[:port]`.
+- Always allowed: `https://j-davidm.github.io`. `http://localhost[:port]` / `http://127.0.0.1[:port]` are allowed only
+  outside production: on the production deployment (`VERCEL_ENV=production`) they get 403; previews, `vercel dev` and
+  the local test harness (VERCEL_ENV unset) still accept them. To test a local build against production, add the exact
+  origin to `RELAY_ALLOWED_ORIGINS`.
 - Always allowed: the deployment's own origins, built from Vercel's system env vars `VERCEL_URL`, `VERCEL_BRANCH_URL` and
   `VERCEL_PROJECT_PRODUCTION_URL`. Vercel sets these automatically, so same-origin `/lax-ramp/` works with no setup.
 - Optional, from `RELAY_ALLOWED_ORIGINS`: exact origins, plus **one** wildcard pattern for the project's preview URLs (see below).

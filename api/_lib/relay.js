@@ -15,15 +15,19 @@ const NM_KM = 1.852, KM_PER_DEG = 111.32;
 const CDN_CACHE = 's-maxage=8, stale-while-revalidate=30';
 
 // ---------------------------------------------------------------- CORS
-// Always allowed: David's GitHub Pages site, local testing, and this deployment's own origins (from Vercel's system env
+// Always allowed: David's GitHub Pages site, local testing (not in production, see below), and this deployment's own origins (from Vercel's system env
 // vars VERCEL_URL / VERCEL_BRANCH_URL / VERCEL_PROJECT_PRODUCTION_URL, so same-origin /lax-ramp/ works with no setup).
 // Extra origins: RELAY_ALLOWED_ORIGINS = comma-separated exact origins, plus at most ONE wildcard pattern whose single `*`
 // stands for one DNS-label fragment, e.g. https://apps-*-j-davidms-projects.vercel.app. Every other origin, including
 // any other *.vercel.app site, is refused with 403. Env is read per request (cheap) so tests and redeploys see changes.
+// Local testing (http://localhost / 127.0.0.1, any port) is allowed only OUTSIDE production: on the production
+// deployment (VERCEL_ENV === 'production') a localhost origin gets 403 like any other site (wx-r2). Previews and
+// `vercel dev` / local harnesses (VERCEL_ENV preview, development or unset) still accept it.
 const FIXED_ORIGIN_RES = [
   /^https:\/\/j-davidm\.github\.io$/,
-  /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d{1,5})?$/,
 ];
+const LOCAL_ORIGIN_RE = /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d{1,5})?$/;
+const isProduction = (e = process.env) => String(e.VERCEL_ENV || '').toLowerCase() === 'production';
 const ORIGIN_SHAPE = /^https?:\/\/[a-z0-9.-]+(?::\d{1,5})?$/;
 const escapeRe = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -60,6 +64,7 @@ function allowedOrigin(origin, e = process.env) {
   const o = origin.toLowerCase();
   if (!ORIGIN_SHAPE.test(o)) return null;
   if (FIXED_ORIGIN_RES.some((re) => re.test(o))) return origin;
+  if (LOCAL_ORIGIN_RE.test(o) && !isProduction(e)) return origin;
   const { exact, wildcard } = originPolicy(e);
   if (exact.has(o)) return origin;
   if (wildcard && wildcard.test(o)) return origin;
@@ -265,6 +270,6 @@ function _reset() { cache.clear(); inflight.clear(); stats.upstreamRequests = 0;
 
 module.exports = {
   CACHE_MS, TIMEOUT_MS, STALE_MS, UA, CDN_CACHE, NM_KM, KM_PER_DEG,
-  allowedOrigin, originPolicy, cors, preflight, send, queryOf,
+  allowedOrigin, originPolicy, isProduction, cors, preflight, send, queryOf,
   areaFromCenter, upstreams, getArea, toStateVector, fromStateVector, osCategory, stats, _reset,
 };
