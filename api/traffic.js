@@ -21,6 +21,13 @@ const cacheMs = () => Number(env.TRAFFIC_CACHE_MS || 180_000);
 const staleMs = () => Number(env.TRAFFIC_STALE_MS || 30 * 60_000);
 const timeoutMs = () => Number(env.TRAFFIC_TIMEOUT_MS || 9000); // D7 lane closures are ~14 MB (≈3 s on a good day)
 const chpRetryMs = () => Number(env.TRAFFIC_CHP_RETRY_MS || 1200);
+// D7 (LA) lane closures are the big one (~14 MB) and hit the 9 s timeout on a cold production call (2026-10-18). It gets its
+// own longer fetch timeout. Once a last good copy exists, the answer waits only the normal timeout; after that it serves the
+// last good D7 set (servedLastGood) and the long fetch keeps running to refresh it for the next request.
+const slowTimeoutMs = () => Number(env.TRAFFIC_TIMEOUT_D7_LCS_MS || 18000);
+const SLOW = new Set(['cwwp2-d7-lcs']);
+// whole refresh budget, well inside vercel.json maxDuration 30 s: no fetch / CHP retry is started or allowed to run past it
+const budgetMs = () => Number(env.TRAFFIC_BUDGET_MS || 22000);
 const CDN = 's-maxage=180, stale-while-revalidate=300';
 const CORRIDORS = ['I-5', 'I-405', 'SR-91', 'SR-60', 'I-10', 'I-15', 'I-215', 'SR-55'];
 const DISTRICTS = [7, 8, 11, 12];
@@ -56,9 +63,10 @@ function corridorOf(...texts) {
 }
 const dirOf = (s) => { const m = /\b(North|South|East|West|[NSEW]B?)\b/i.exec(String(s || '')); return m ? m[1][0].toUpperCase() : ''; };
 
-async function getText(url, name) {
+async function getText(url, name, ms = timeoutMs()) {
+  ms = Math.max(1, Math.round(ms));
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(new Error(`timeout ${timeoutMs()} ms`)), timeoutMs());
+  const t = setTimeout(() => ctrl.abort(new Error(`timeout ${ms} ms`)), ms);
   stats.upstreamRequests++;
   try {
     const r = await fetch(url, { signal: ctrl.signal, redirect: 'error', headers: { Accept: 'application/json, text/xml;q=0.9', 'User-Agent': R.UA.replace('adsb-relay', 'traffic-relay') } });
@@ -68,7 +76,7 @@ async function getText(url, name) {
     throw new Error(`${name}: ${String((e && e.cause && e.cause.code) || (e && e.message) || e).slice(0, 100)}`);
   } finally { clearTimeout(t); }
 }
-const getJson = async (url, name) => { const txt = await getText(url, name); try { return JSON.parse(txt); } catch { throw new Error(`${name}: bad JSON`); } };
+const getJson = async (url, name, ms) => { const txt = await getText(url, name, ms); try { return JSON.parse(txt); } catch { throw new Error(`${name}: bad JSON`); } };
 
 // ---------------------------------------------------------------- parsers (exported for tests)
 /** CWWP2 lcsStatusDxx.json → closures in effect now on the 8 corridors */
@@ -203,28 +211,53 @@ function summarize(incidents, travelTimes) {
   return out;
 }
 
+const pendingSlow = {}; // name → { p, t0 } long fetch still running (shared by later refreshes, never started twice)
 async function refresh() {
   const now = Date.now();
+  const deadline = now + budgetMs();
+  const left = (ms = timeoutMs()) => Math.min(ms, deadline - Date.now());
   const jobs = [];
   for (const d of DISTRICTS) {
-    jobs.push({ name: `cwwp2-d${d}-lcs`, run: () => getJson(`${cwwpBase()}/data/d${d}/lcs/lcsStatusD${pad2(d)}.json`, `d${d} lcs`).then((j) => parseLcs(j, now)) });
-    jobs.push({ name: `cwwp2-d${d}-cms`, run: () => getJson(`${cwwpBase()}/data/d${d}/cms/cmsStatusD${pad2(d)}.json`, `d${d} cms`).then(parseCms) });
+    const name = `cwwp2-d${d}-lcs`;
+    jobs.push({ name, run: () => getJson(`${cwwpBase()}/data/d${d}/lcs/lcsStatusD${pad2(d)}.json`, `d${d} lcs`, left(SLOW.has(name) ? slowTimeoutMs() : timeoutMs())).then((j) => parseLcs(j, Date.now())) });
+    jobs.push({ name: `cwwp2-d${d}-cms`, run: () => getJson(`${cwwpBase()}/data/d${d}/cms/cmsStatusD${pad2(d)}.json`, `d${d} cms`, left()).then(parseCms) });
   }
-  jobs.push({ name: 'cwwp2-d12-tt', tt: true, run: () => getJson(`${cwwpBase()}/data/d12/tt/ttStatusD12.json`, 'd12 tt').then(parseTt) });
+  jobs.push({ name: 'cwwp2-d12-tt', tt: true, run: () => getJson(`${cwwpBase()}/data/d12/tt/ttStatusD12.json`, 'd12 tt', left()).then(parseTt) });
   // CHP's server sometimes hands out a truncated, hours-old copy of sa.xml (seen 2026-10-18: 233,472 B, no </State>,
   // Oct 17 logs). Treat that as a failed source, so the last good CHP set is kept instead of silently reporting 0.
   // The file is rewritten every few seconds and a read during the write gets the partial file, so retry up to 3 times, 1.2 s apart (one CHP backend also serves a stale cut-off copy for minutes at a time; the per-source last good covers that).
   const chpWhole = (x) => /<\/State>\s*$/.test(String(x));
   jobs.push({ name: 'chp-cad', run: async () => {
-    let x = await getText(chpUrl(), 'chp');
-    for (let k = 0; k < 3 && !chpWhole(x); k++) { await new Promise((r) => setTimeout(r, chpRetryMs())); x = await getText(chpUrl(), 'chp'); }
+    let x = await getText(chpUrl(), 'chp', left());
+    // retry only while a retry still fits the budget (≥ 1.5 s of fetch time left after the pause)
+    for (let k = 0; k < 3 && !chpWhole(x) && deadline - Date.now() > chpRetryMs() + 1500; k++) { await new Promise((r) => setTimeout(r, chpRetryMs())); x = await getText(chpUrl(), 'chp', left()); }
     if (!chpWhole(x)) throw new Error('chp: truncated feed');
     return parseChp(x, now);
   } });
   const res = await Promise.all(jobs.map(async (j) => {
     const t0 = Date.now();
     try {
-      const items = await j.run();
+      let items;
+      if (SLOW.has(j.name)) {
+        // long fetch (own timeout), shared if one is already in flight; it always records its result as the last good copy
+        const pend = pendingSlow[j.name] || (pendingSlow[j.name] = { t0, p: j.run().then((it) => { lastGood[j.name] = { items: it, at: Date.now() }; return it; }).finally(() => { delete pendingSlow[j.name]; }) });
+        pend.p.catch(() => {}); // a background failure after we answered from the last good copy is not unhandled
+        const lg = lastGood[j.name];
+        if (lg && Date.now() - lg.at < staleMs()) {
+          let timer;
+          const quick = new Promise((r) => { timer = setTimeout(() => r(null), Math.max(0, left())); });
+          const got = await Promise.race([pend.p.then((it) => ({ it }), (err) => ({ err })), quick]).finally(() => clearTimeout(timer));
+          if (got && got.err) throw got.err; // a real failure (HTTP error, bad JSON…) → ok:false + last good, as for every source
+          if (!got) {
+            const g = lastGood[j.name];
+            if (g && Date.now() - g.at < staleMs())
+              return { j, items: g.items, s: { name: j.name, ok: true, ms: Date.now() - t0, count: g.items.length, servedLastGood: true, refreshing: !!pendingSlow[j.name], lastGoodAgeMs: Date.now() - g.at } };
+            items = await pend.p; // no usable copy any more: wait for the fetch itself (bounded by its timeout)
+          } else items = got.it;
+        } else items = await pend.p; // cold start: wait for the long fetch (≤ TRAFFIC_TIMEOUT_D7_LCS_MS, and the budget)
+        return { j, items, s: { name: j.name, ok: true, ms: Date.now() - t0, count: items.length } };
+      }
+      items = await j.run();
       lastGood[j.name] = { items, at: Date.now() };
       return { j, items, s: { name: j.name, ok: true, ms: Date.now() - t0, count: items.length } };
     } catch (e) {
@@ -235,7 +268,7 @@ async function refresh() {
       return { j, items: [], s };
     }
   }));
-  if (!res.some((r) => r.s.ok)) { const err = new Error('all traffic sources failed'); err.sources = res.map((r) => r.s); throw err; }
+  if (!res.some((r) => r.s.ok && !r.s.servedLastGood)) { const err = new Error('all traffic sources failed'); err.sources = res.map((r) => r.s); throw err; }
   const travelTimes = res.filter((r) => r.j.tt).flatMap((r) => r.items);
   const incidents = res.filter((r) => !r.j.tt).flatMap((r) => r.items)
     .sort((a, b) => b.sev - a.sev || (b.at || 0) - (a.at || 0)).slice(0, MAX_INC);
@@ -273,4 +306,4 @@ module.exports = async function handler(req, res) {
     R.send(res, 503, { error: 'traffic sources unavailable', sources: e.sources || [] }, 'no-store');
   }
 };
-Object.assign(module.exports, { parseLcs, parseCms, parseTt, parseChp, corridorOf, summarize, chpTime, stats, CORRIDORS, _reset: () => { cache = null; inflight = null; stats.upstreamRequests = 0; for (const k of Object.keys(lastGood)) delete lastGood[k]; } });
+Object.assign(module.exports, { parseLcs, parseCms, parseTt, parseChp, corridorOf, summarize, chpTime, stats, CORRIDORS, _reset: () => { cache = null; inflight = null; stats.upstreamRequests = 0; for (const k of Object.keys(lastGood)) delete lastGood[k]; for (const k of Object.keys(pendingSlow)) delete pendingSlow[k]; } });
