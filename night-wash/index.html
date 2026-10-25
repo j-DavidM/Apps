@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en" class="t-night">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Night Wash · isometric laundromat</title>
+<meta name="description" content="A tiny interactive isometric laundromat with live weather, a real clock and a washer-drum Pomodoro timer.">
+<style>
+:root{--amb:#f2a33a;--amb2:#ffcf7a;--txt:#ddd6c8;--dim:#a09888}
+/* ---- mode palettes ---- */
+html.t-day{--bg:#f3e9d6;--wall:#f6e8cc;--wall2:#ecd9b5;--stripe:rgba(196,150,96,.16);--wains:#c08d5c;--fa:#f2e8d4;--fb:#e1cfae;--ln:#5b4632;--tint:#ffffff;--sky1:#7fbde6;--sky2:#dff1fb;--city:#9fb3c2;--cloud:#ffffff;--sunpool:rgba(255,236,170,.75);--lamp:.35;--wet:0}
+html.t-golden{--bg:#3a1a10;--wall:#f2a466;--wall2:#e38c50;--stripe:rgba(130,45,10,.14);--wains:#99482a;--fa:#e09058;--fb:#c97542;--ln:#4a2414;--tint:#ffd2a6;--sky1:#5b3f86;--sky2:#ff9a48;--city:#6b2e3a;--cloud:#ffc39a;--sunpool:rgba(255,170,80,.7);--lamp:.6;--wet:0}
+html.t-night{--bg:#08101d;--wall:#2a3b55;--wall2:#223149;--stripe:rgba(255,255,255,.05);--wains:#18233a;--fa:#2a3a52;--fb:#213046;--ln:#0f1726;--tint:#8b9fd0;--sky1:#030916;--sky2:#17305a;--city:#0a1222;--cloud:#2c3c58;--sunpool:rgba(0,0,0,0);--lamp:1;--wet:0}
+html.t-night.wx-rain{--bg:#061418;--wall:#21424a;--wall2:#1a363e;--wains:#10262c;--fa:#1d3d45;--fb:#163139;--tint:#7fb2b8;--sky1:#0d1d22;--sky2:#2d4c55;--cloud:#40585e;--city:#08151a;--wet:1}
+html.t-day.wx-rain{--sky1:#7d8d9c;--sky2:#c7d1da;--cloud:#e2e6ea;--sunpool:rgba(220,230,240,.35)}
+html.t-day.wx-snow{--sky1:#b9c7d3;--sky2:#eef3f7}
+html.t-disco{--bg:#12051f;--wall:#2f1650;--wall2:#260f45;--stripe:rgba(255,120,255,.08);--wains:#18082c;--fa:#2b1157;--fb:#1b0938;--ln:#0d0518;--tint:#c7a2ff;--sky1:#14062a;--sky2:#5a1e7a;--city:#12051f;--cloud:#4a2a6a;--sunpool:rgba(0,0,0,0);--lamp:.4;--wet:0}
+*{box-sizing:border-box}
+body{margin:0;background:#0e0f10;color:var(--txt);font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-tap-highlight-color:transparent}
+main{display:grid;grid-template-columns:1fr 350px;height:100vh;height:100dvh}
+#stage{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;min-width:0;background:var(--bg);transition:background .6s}
+#scene{width:100%;height:100%;max-height:100dvh;display:block;touch-action:manipulation}
+aside{padding:16px 18px;overflow:auto;border-left:1px solid #222;background:#0e0f10}
+h1{font:600 18px/1.2 ui-monospace,Menlo,monospace;margin:0 0 2px;color:var(--amb2);letter-spacing:.04em}
+.sub{color:var(--dim);font-size:12px;margin:0 0 12px}
+.card{border:1px solid #2a2926;border-radius:10px;padding:12px;margin:0 0 12px;background:#141312}
+.card h2{font:600 12px ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin:0 0 8px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.big{font:600 44px/1 ui-monospace,Menlo,monospace;color:var(--amb);letter-spacing:.03em;font-variant-numeric:tabular-nums}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{min-height:44px;min-width:44px;padding:0 14px;border-radius:8px;border:1px solid #3a3833;background:#1b1a18;color:var(--txt);font:600 14px ui-sans-serif,system-ui;cursor:pointer;transition:background .15s,transform .08s}
+button:hover{background:#26241f;border-color:var(--amb)}button:active{transform:scale(.96)}
+button.pri{background:var(--amb);color:#1a1205;border-color:var(--amb)}
+button:focus-visible{outline:2px solid var(--amb2);outline-offset:2px}
+label{font-size:13px;color:var(--dim)}
+input[type=number]{width:64px;min-height:44px;background:#1b1a18;color:var(--txt);border:1px solid #3a3833;border-radius:8px;padding:0 8px;font-size:14px}
+.tag{font:600 12px ui-monospace,monospace;padding:2px 6px;border-radius:5px;border:1px solid #444;color:var(--dim)}
+.tag.sim{border-color:#c86;color:#fb9}.tag.live{border-color:#4a6;color:#8d8}
+#log{min-height:64px;font-size:13px}#log p{margin:0 0 6px}#log p:first-child{color:var(--amb2)}
+.small{font-size:12px;color:var(--dim)}
+/* ---- scene ---- */
+#scene *{vector-effect:non-scaling-stroke}
+.top,.fr,.sd,.ol{stroke:var(--ln);stroke-width:1.2;stroke-linejoin:round}
+.ln{fill:none;stroke:var(--ln);stroke-width:1.2}
+.wallL{fill:var(--wall)}.wallB{fill:var(--wall2)}.strp{fill:var(--stripe)}.wains{fill:var(--wains)}
+.ta{fill:var(--fa)}.tb{fill:var(--fb)}
+#tint{fill:var(--tint);mix-blend-mode:multiply;pointer-events:none}
+.lcd{fill:#0d0b08;stroke:#333;stroke-width:1}
+.lcdt{font:700 .25px ui-monospace,Menlo,monospace;fill:#ffb347;text-anchor:middle}
+.door{fill:#cfd5da;stroke:var(--ln);stroke-width:1.2}.glass{fill:#29506b;stroke:#1b3446;stroke-width:1}
+.washer.on .glass{fill:#3c6f8f}
+.spin .drum,.disco .drum{animation:spin 1.6s linear infinite;transform-box:fill-box;transform-origin:center}
+.disco .drum{animation-duration:.5s}
+.washer.paused .lcdt{animation:blink 1s steps(2) infinite}
+.washer.pomo.on .lcd{stroke:#ffb347;stroke-width:2}
+@keyframes spin{to{transform:rotate(360deg)}}@keyframes blink{50%{opacity:.25}}
+.obj{cursor:pointer;outline:none}
+.obj .hit{fill:transparent;stroke:none}
+.obj:hover{filter:brightness(1.12) drop-shadow(0 0 3px rgba(255,190,90,.8))}
+.obj.press{filter:brightness(1.35) drop-shadow(0 0 6px #ffb347)}
+.obj:focus{outline:none}
+.obj:focus-visible{filter:drop-shadow(0 0 2px #fff) drop-shadow(0 0 5px #ffb347)}
+.obj:focus-visible .hit{stroke:#ffcf7a;stroke-width:2.5;stroke-dasharray:6 4}
+.nix{fill:#140c06;stroke:#5a4636;stroke-width:1}
+.nixt{font:600 .42px ui-monospace,monospace;fill:#ff9a3c;text-anchor:middle}
+.wsimt{font:800 .3px ui-monospace,monospace;fill:#ff9d6b;paint-order:stroke;stroke:#10161d;stroke-width:3px;display:none}html.wsim .wsimt{display:inline}
+.wtext{font:600 .55px ui-sans-serif,system-ui;fill:#f2ece0}.wsm{font:600 .19px ui-sans-serif,system-ui;fill:#c9c0ae}
+/* window hero */
+#sun,#moon,#clouds,#rain,#snow,#fog,#lit{display:none}
+.t-day #sun,.t-golden #sun{display:inline}.t-night #moon,.t-disco #moon{display:inline}
+.wx-rain #sun,.wx-snow #sun,.wx-rain #moon{display:none}
+.wx-cloudy #clouds,.wx-rain #clouds,.wx-snow #clouds,.wx-fog #clouds{display:inline}
+.wx-rain #rain{display:inline}.wx-snow #snow{display:inline}.wx-fog #fog{display:inline}
+.t-night #lit,.t-golden #lit,.t-disco #lit{display:inline}
+#rainfall{animation:fall .7s linear infinite}#snowfall{animation:snowf 5s linear infinite}
+@keyframes fall{from{transform:translate(.3px,-1.4px)}to{transform:translate(-.1px,.1px)}}
+@keyframes snowf{from{transform:translate(0,-1.5px)}to{transform:translate(.2px,0)}}
+.blinds{display:none}.blinded .blinds{display:inline}
+#sunpool{fill:var(--sunpool);pointer-events:none;mix-blend-mode:screen}
+.lampglow{opacity:var(--lamp);pointer-events:none;mix-blend-mode:screen}
+#wet{opacity:var(--wet);pointer-events:none}
+.signp{fill:#fbf4e2;stroke:#555;stroke-width:1}.signt{font:600 .2px Georgia,serif;fill:#3a2a1a}
+.matt{font:italic .3px Georgia,serif;fill:#f3d9b0;text-anchor:middle;letter-spacing:.04em}
+.steam{opacity:0}.brewing .steam{animation:steam 1.4s ease-out infinite}
+@keyframes steam{0%{opacity:0;transform:translateY(0)}40%{opacity:.9}100%{opacity:0;transform:translateY(-14px)}}
+.egg{display:none}.egg.show{display:inline}
+.jitter{animation:jit .09s linear infinite}@keyframes jit{25%{transform:translate(1.5px,-1px)}50%{transform:translate(-1px,1px)}75%{transform:translate(1px,1.5px)}}
+.bub{fill:rgba(220,240,255,.15);stroke:#e8f6ff;stroke-width:1.2;animation:rise 4s ease-in forwards}
+@keyframes rise{to{transform:translateY(-420px);opacity:0}}
+.peek{animation:peek 2.4s ease-in-out infinite;transform-box:fill-box}@keyframes peek{50%{transform:translateY(-6px)}}
+.stoolspin{animation:hop .4s ease-out}@keyframes hop{50%{transform:translateY(-8px)}}
+/* disco */
+#discofx{display:none;pointer-events:none}.t-disco #discofx{display:inline}
+.beam{mix-blend-mode:screen;opacity:.33;animation:beam 1.2s steps(2) infinite}
+.beam:nth-child(2n){animation-delay:-.6s}
+@keyframes beam{50%{opacity:.12}}
+.spark{fill:#fff;animation:tw 1s ease-in-out infinite}@keyframes tw{50%{opacity:.1;transform:scale(.4)}}
+.spark{transform-box:fill-box;transform-origin:center}
+.spot{mix-blend-mode:screen;opacity:.45}
+dialog{background:#efe7d3;color:#2a2620;border:0;border-radius:10px;max-width:min(420px,92vw);font:15px/1.5 Georgia,serif}
+dialog::backdrop{background:#0009}dialog h3{margin:0 0 8px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:0s!important;animation-iteration-count:1!important}}
+.paused-all *{animation-play-state:paused!important}
+@media (max-width:760px){
+ main{display:block;height:auto}
+ #stage{display:block;height:auto}
+ #scene{width:100%;height:auto;max-height:none}
+ #scene .rt{display:none}  /* in-room text would render <12px on phones; mirrored in the panel below */
+ aside{border:0;padding:10px 14px 40px}
+ .big{font-size:40px}
+}
+</style>
+</head>
+<body>
+<main>
+ <div id="stage" aria-label="Isometric laundromat scene"><svg id="scene" viewBox="132 -6 736 712" role="group" aria-label="Laundromat — every object is a button"></svg></div>
+ <aside>
+  <h1>NIGHT WASH</h1>
+  <p class="sub">a tiny laundromat · tap everything · <span id="eggc">🥚 0/10</span> · <span id="modec">mode</span></p>
+  <div class="card" id="pomoCard">
+   <h2><span id="pmode">Wash cycle · focus</span><span class="tag">washer A</span></h2>
+   <div class="big" id="ptime">25:00</div>
+   <div class="row" style="margin-top:10px">
+    <button class="pri" id="pstart">Start</button><button id="preset">Reset</button><button id="pskip">Skip</button>
+   </div>
+   <div class="row" style="margin-top:8px">
+    <label>Focus <input type="number" id="pwork" min="1" max="90" value="25"></label>
+    <label>Break <input type="number" id="pbreak" min="1" max="30" value="5"></label>
+    <span class="small" id="pdone">0 loads folded</span>
+   </div>
+  </div>
+  <div class="card">
+   <h2><span>Outside</span><span id="wtag" class="tag">…</span></h2>
+   <div id="wline">Loading weather…</div>
+   <div class="small" id="wsrc">Open-Meteo · Santa Ana, CA</div>
+   <div class="row" style="margin-top:8px"><button id="geo">📍 Use my location</button><button id="unit">°F / °C</button></div>
+  </div>
+  <div class="card">
+   <h2><span>Clock</span><span id="ctag" class="tag live">LIVE</span></h2>
+   <div class="big" style="font-size:30px" id="clk">--:--</div>
+  </div>
+  <div class="card"><h2><span>Attendant's log</span></h2><div id="log" aria-live="polite"><p>Welcome in. Everything here does something — tap around.</p></div></div>
+  <p class="small">Washers B–F run <b>SIM</b> cycles (made-up timers). Clock is your local time; weather is live from Open-Meteo unless tagged SIM. Original art, inspired by laundro.cafe.</p>
+ </aside>
+</main>
+<dialog id="dlg"><div id="dlgb"></div><form method="dialog"><button style="margin-top:12px;background:#2a2620;color:#efe7d3">Close</button></form></dialog>
+<script>
+(()=>{
+const S=40,OX=500,OY=300,K=.866;
+const P=(x,y,z=0)=>[OX+(x-y)*S*K,OY+(x+y)*S*.5-z*S];
+const pts=a=>a.map(p=>P(...p).map(n=>n.toFixed(1)).join(',')).join(' ');
+const mat=(a,b,c,d,[e,f])=>`matrix(${a} ${b} ${c} ${d} ${e.toFixed(1)} ${f.toFixed(1)})`;
+const XZ=(x,y,z)=>mat(K*S,.5*S,0,S,P(x,y,z));
+const YZ=(x,y,z)=>mat(K*S,-.5*S,0,S,P(x,y,z));
+const FL=(x,y,z=0)=>mat(K*S,.5*S,-K*S,.5*S,P(x,y,z));
+const shade=(h,f)=>{const n=parseInt(h.slice(1),16),c=[n>>16,n>>8&255,n&255].map(v=>Math.max(0,Math.min(255,Math.round(v*f))));return '#'+c.map(v=>v.toString(16).padStart(2,'0')).join('')};
+const box=(x,y,z,w,d,h,col='#888888')=>`<polygon class="top" style="fill:${shade(col,1.12)}" points="${pts([[x,y,z+h],[x+w,y,z+h],[x+w,y+d,z+h],[x,y+d,z+h]])}"/><polygon class="fr" style="fill:${col}" points="${pts([[x,y+d,z],[x+w,y+d,z],[x+w,y+d,z+h],[x,y+d,z+h]])}"/><polygon class="sd" style="fill:${shade(col,.78)}" points="${pts([[x+w,y,z],[x+w,y+d,z],[x+w,y+d,z+h],[x+w,y,z+h]])}"/>`;
+const obj=(id,label,inner,hit)=>`<g class="obj" data-obj="${id}" id="o-${id}" tabindex="0" role="button" aria-label="${label}">${inner}${hit}</g>`;
+const MINH=90; // hit boxes >= 90 viewBox units => >= 44 CSS px at 390px wide
+const hitC=(x,y,z,r)=>{const[a,b]=P(x,y,z);r=Math.max(r,MINH/2);return `<circle class="hit" cx="${a.toFixed(1)}" cy="${b.toFixed(1)}" r="${r}"/>`};
+const hitP=a=>{const q=a.map(p=>P(...p));let x0=Math.min(...q.map(p=>p[0])),x1=Math.max(...q.map(p=>p[0])),y0=Math.min(...q.map(p=>p[1])),y1=Math.max(...q.map(p=>p[1]));
+ if(x1-x0<MINH){const c=(x0+x1)/2;x0=c-MINH/2;x1=c+MINH/2}if(y1-y0<MINH){const c=(y0+y1)/2;y0=c-MINH/2;y1=c+MINH/2}
+ return `<rect class="hit" x="${x0.toFixed(1)}" y="${y0.toFixed(1)}" width="${(x1-x0).toFixed(1)}" height="${(y1-y0).toFixed(1)}" rx="8"/>`};
+const glowAt=(x,y,z,rx,ry,c='#ffb347',o=.55)=>{const[a,b]=P(x,y,z);return `<ellipse class="lampglow" cx="${a.toFixed(1)}" cy="${b.toFixed(1)}" rx="${rx}" ry="${ry}" fill="url(#g-${c.slice(1)})" opacity="${o}"/>`};
+let s=`<defs>
+<radialGradient id="g-ffb347"><stop offset="0" stop-color="#ffb347" stop-opacity=".9"/><stop offset=".5" stop-color="#ff9a2a" stop-opacity=".3"/><stop offset="1" stop-color="#ff9a2a" stop-opacity="0"/></radialGradient>
+<radialGradient id="g-ffe9b0"><stop offset="0" stop-color="#ffe9b0" stop-opacity=".95"/><stop offset="1" stop-color="#ffe9b0" stop-opacity="0"/></radialGradient>
+<linearGradient id="skyg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--sky1)"/><stop offset="1" style="stop-color:var(--sky2)"/></linearGradient>
+<radialGradient id="ballg" cx=".35" cy=".35"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#7a7a90"/></radialGradient>
+<pattern id="wp" width=".6" height="7" patternUnits="userSpaceOnUse"><rect width=".28" height="7" class="strp"/><circle cx=".44" cy=".5" r=".035" class="strp"/><circle cx=".44" cy="1.4" r=".035" class="strp"/></pattern>
+<clipPath id="winclip"><rect x=".15" y=".15" width="3.3" height="2.7"/></clipPath>
+<clipPath id="floorclip"><polygon points="${pts([[0,0,0],[10,0,0],[10,10,0],[0,10,0]])}"/></clipPath></defs><g id="room">`;
+// walls with wallpaper + wainscot
+const wall=(tf,cls)=>`<g transform="${tf}"><rect width="10" height="7" class="${cls}"/><rect width="10" height="5.6" fill="url(#wp)"/><rect y="5.75" width="10" height="1.25" class="wains"/><rect y="5.6" width="10" height=".15" class="wains" style="filter:brightness(1.3)"/>${[...Array(20)].map((_,i)=>`<line x1="${i*.5+.25}" y1="5.8" x2="${i*.5+.25}" y2="7" stroke="rgba(0,0,0,.12)" stroke-width="1"/>`).join('')}</g>`;
+s+=wall(YZ(0,10,7),'wallL')+wall(XZ(0,0,7),'wallB');
+s+=`<polyline class="ln" points="${pts([[0,10,7],[0,0,7],[10,0,7]])}"/><polyline class="ln" points="${pts([[0,0,7],[0,0,0]])}"/>`;
+// checker floor
+s+=`<g transform="${FL(0,0,0)}">`;for(let i=0;i<10;i++)for(let j=0;j<10;j++)s+=`<rect x="${i}" y="${j}" width="1" height="1" class="${(i+j)%2?'tb':'ta'}"/>`;s+=`</g>`;
+s+=`<polygon class="ln" points="${pts([[0,0,0],[10,0,0],[10,10,0],[0,10,0]])}"/>`;
+// sunlight through window onto floor
+s+=`<polygon id="sunpool" points="${pts([[0,5.8,0],[0,9.4,0],[3.6,10,0],[3.6,6.4,0]])}" clip-path="url(#floorclip)"/>`;
+s+=`<g id="wet">${[[2,3],[6,8],[8.5,6],[3.5,8.8]].map(([x,y])=>{const[a,b]=P(x,y,0);return `<ellipse cx="${a}" cy="${b}" rx="38" ry="12" fill="#9fd0e0" opacity=".18"/>`}).join('')}</g>`;
+s+=glowAt(4.8,6.0,0,230,120,'#ffb347',.6)+glowAt(5,1.9,0,180,80,'#ffb347',.35)+glowAt(8.8,1.8,0,110,50,'#ffb347',.35);
+// window (hero)
+const rainL=Array.from({length:44},(_,i)=>{const x=(i*0.413)%3.3+.15,y=(i*0.587)%2.9;return `<line x1="${x.toFixed(2)}" y1="${y.toFixed(2)}" x2="${(x-.07).toFixed(2)}" y2="${(y+.32).toFixed(2)}" stroke="#cfe6ff" stroke-width="1.2" opacity=".7"/>`}).join('');
+const snowL=Array.from({length:36},(_,i)=>`<circle cx="${((i*0.47)%3.3+.15).toFixed(2)}" cy="${((i*0.61)%3).toFixed(2)}" r="${(.03+(i%3)*.012).toFixed(3)}" fill="#fff"/>`).join('');
+s+=obj('window','Window — live weather outside; tap to toggle blinds',`<g transform="${YZ(0.02,9.4,4.5)}">
+<rect x="-.08" y="-.08" width="3.76" height="3.16" rx=".06" fill="#7a4a2a" class="ol"/>
+<rect x=".15" y=".15" width="3.3" height="2.7" fill="url(#skyg)"/>
+<g clip-path="url(#winclip)">
+<g id="sun"><circle cx="2.7" cy=".75" r=".55" fill="url(#g-ffe9b0)"/><circle cx="2.7" cy=".75" r=".26" fill="#ffe27a"/></g>
+<g id="moon"><circle cx="2.6" cy=".7" r=".24" fill="#f3ecd2"/><circle cx="2.7" cy=".64" r=".2" fill="var(--sky1)"/>${[[.5,.4],[1.1,.7],[1.6,.3],[2.1,1.1],[.8,1.1]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r=".025" fill="#fff"/>`).join('')}</g>
+<g id="clouds" fill="var(--cloud)"><ellipse cx=".9" cy=".7" rx=".55" ry=".2"/><ellipse cx="1.2" cy=".58" rx=".35" ry=".22"/><ellipse cx="2.4" cy="1.05" rx=".6" ry=".18"/><ellipse cx="2.6" cy=".92" rx=".3" ry=".18"/></g>
+<path d="M.15 2.85 L.15 2.0 L.55 2.0 L.55 1.55 L.95 1.55 L.95 2.1 L1.35 2.1 L1.35 1.75 L1.6 1.6 L1.85 1.75 L1.85 2.2 L2.3 2.2 L2.3 1.85 L2.8 1.85 L2.8 2.3 L3.45 2.3 L3.45 2.85Z" fill="var(--city)"/>
+<g id="lit" fill="#ffc35a">${[[.3,2.15],[.7,1.7],[.75,1.95],[1.1,2.3],[1.5,1.9],[2.0,2.35],[2.5,2.0],[2.6,2.15],[3.0,2.45]].map(([x,y])=>`<rect x="${x}" y="${y}" width=".09" height=".1"/>`).join('')}</g>
+<rect id="fog" x=".15" y=".15" width="3.3" height="2.7" fill="#ffffff" opacity=".35"/>
+<g id="rain"><g id="rainfall">${rainL}</g>${[[.6,.9],[2.2,1.6],[1.4,2.4],[3,.5]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r=".05" fill="#dff" opacity=".6"/>`).join('')}</g>
+<g id="snow"><g id="snowfall">${snowL}</g><path d="M.15 2.85 Q1.8 2.6 3.45 2.8 L3.45 2.85Z" fill="#fff"/></g>
+<g id="snowman" class="egg"><circle cx=".7" cy="2.55" r=".24" fill="#fff"/><circle cx=".7" cy="2.2" r=".16" fill="#fff"/><path d="M.72 2.2 l.12 .03 l-.12 .02Z" fill="#f80"/></g>
+<polygon points=".4,.15 .9,.15 .3,2.85 .15,2.85 .15,1.5" fill="#fff" opacity=".08"/>
+</g>
+<text id="wsimw" class="wsimt" x="3.4" y=".5" text-anchor="end">SIM</text><g class="blinds">${[...Array(11)].map((_,i)=>`<rect x=".15" y="${(.15+i*.245).toFixed(2)}" width="3.3" height=".22" fill="#e8d6b0" stroke="#8a6a4a" stroke-width=".8"/>`).join('')}</g>
+<line x1="1.8" y1=".15" x2="1.8" y2="2.85" stroke="#7a4a2a" stroke-width="3"/><line x1=".15" y1="1.5" x2="3.45" y2="1.5" stroke="#7a4a2a" stroke-width="3"/>
+<rect x="-.18" y="3.0" width="3.96" height=".14" fill="#8a5a34" class="ol"/></g>`,hitP([[0.02,9.4,1.4],[0.02,5.8,1.4],[0.02,5.8,4.5],[0.02,9.4,4.5]]));
+// weather panel
+s+=obj('weather','Weather panel — refresh / switch units',`<g transform="${YZ(0.02,5.5,6.1)}"><rect x="0" y="0" width="2.1" height="1.25" rx=".08" fill="#3a3f46" class="ol"/><rect x=".08" y=".08" width="1.94" height="1.09" rx=".05" fill="#10161d"/>
+<text class="wsm rt" x=".18" y=".32" id="wloc">SANTA ANA</text><text id="wsimp" class="wsimt" x="1.98" y=".36" text-anchor="end">SIM</text><text class="wtext rt" x=".16" y=".9" id="wtemp">--°</text><text class="wsm rt" x=".18" y="1.1" id="wdesc">loading</text>
+<g transform="translate(1.55 .58)"><g id="wi-cloud"><circle cx="-.12" cy="0" r=".13" fill="#cfd8e0"/><circle cx=".06" cy="-.06" r=".17" fill="#e9eef2"/><circle cx=".2" cy=".03" r=".11" fill="#cfd8e0"/></g>
+<g id="wi-rain" style="display:none" stroke="#7fc0ff" stroke-width="1.6"><line x1="-.1" y1=".2" x2="-.14" y2=".34"/><line x1=".04" y1=".2" x2="0" y2=".34"/><line x1=".18" y1=".2" x2=".14" y2=".34"/></g>
+<g id="wi-sun" style="display:none"><circle r=".2" fill="#ffd25a"/></g></g></g>`,hitP([[0.02,5.5,4.85],[0.02,3.4,4.85],[0.02,3.4,6.1],[0.02,5.5,6.1]]));
+// TV
+s+=obj('tv','Retro TV — change channel',`<polyline class="ln" points="${pts([[0,2.1,3.4],[0.9,2.1,3.85],[0,2.1,3.85]])}"/>${box(0.05,1.0,3.85,1.05,1.9,1.3,'#9a6236')}
+<line class="ln" x1="${P(.6,1.7,5.15)[0]}" y1="${P(.6,1.7,5.15)[1]}" x2="${P(.6,1.3,6.0)[0]}" y2="${P(.6,1.3,6.0)[1]}"/><line class="ln" x1="${P(.6,1.8,5.15)[0]}" y1="${P(.6,1.8,5.15)[1]}" x2="${P(.6,2.5,5.9)[0]}" y2="${P(.6,2.5,5.9)[1]}"/>
+<g transform="${YZ(1.1,2.8,5.05)}"><rect x=".08" y=".1" width="1.3" height="1.0" rx=".12" fill="#2a2a2a"/><rect x=".14" y=".16" width="1.18" height=".88" rx=".1" fill="#1d3a3a"/><g id="tvc"></g><rect x="1.42" y=".1" width=".38" height="1.0" fill="#d8c8a8" class="ol"/><circle cx="1.61" cy=".35" r=".11" fill="#555"/><circle cx="1.61" cy=".7" r=".08" fill="#555"/><circle cx="1.61" cy=".95" r=".035" fill="#ff5a3a"/></g>`,hitC(1.1,1.9,4.5,46));
+// nixie
+s+=obj('nixie','Nixie counter — loads washed today',`<g transform="${XZ(1.0,0.02,6.0)}"><rect x="-.15" y=".95" width="2.3" height=".2" fill="#8a5a34" class="ol"/>${[0,1,2,3].map(i=>`<rect class="nix" x="${.1+i*.5}" y="0" width=".38" height=".95" rx=".19"/><ellipse cx="${.29+i*.5}" cy=".5" rx=".16" ry=".35" fill="#ff8a2a" opacity=".22"/><text class="nixt rt" id="nx${i}" x="${.29+i*.5}" y=".66">0</text>`).join('')}</g>`,hitC(2,0.02,5.5,44));
+// clock
+s+=obj('clock','Wall clock — real local time',`<g transform="${XZ(8.6,0.02,6.2)}"><circle cx=".6" cy=".6" r=".55" fill="#2d2a26" class="ol"/><circle cx=".6" cy=".6" r=".46" fill="#fbf3e0"/>${[...Array(12)].map((_,i)=>`<line x1=".6" y1=".2" x2=".6" y2=".27" stroke="#333" stroke-width="1.2" transform="rotate(${i*30} .6 .6)"/>`).join('')}<line id="hh" x1=".6" y1=".6" x2=".6" y2=".38" stroke="#222" stroke-width="2.6" stroke-linecap="round"/><line id="mh" x1=".6" y1=".6" x2=".6" y2=".24" stroke="#222" stroke-width="1.6" stroke-linecap="round"/><line id="sh" x1=".6" y1=".66" x2=".6" y2=".22" stroke="#d0402a" stroke-width="1"/></g>`,hitC(9.2,0.02,5.6,44));
+// mat
+s+=obj('mat','Welcome mat',`<g transform="${FL(5.0,9.0,0.01)}"><rect width="2.6" height=".85" rx=".06" fill="#9c3d2a" class="ol"/><rect x=".08" y=".08" width="2.44" height=".69" fill="none" stroke="#e7b98a" stroke-width="1"/><text class="matt rt" x="1.3" y=".55">welcome</text></g>
+<g id="puddle" class="egg"><g transform="${FL(7.9,9.1,0.01)}"><ellipse cx=".5" cy=".4" rx=".6" ry=".35" fill="#7fb6d6" opacity=".55"/></g></g>`,hitP([[5,9,0],[7.6,9,0],[7.6,9.9,0],[5,9.9,0]]));
+// basket
+const bk=(x,y)=>{const[a,b]=P(x,y,1.0),[c,d]=P(x,y,0);return `<path class="ol" fill="#c9965a" d="M${a-34} ${b} L${c-24} ${d} Q${c} ${d+12} ${c+24} ${d} L${a+34} ${b}Z"/>${[-18,-6,6,18].map(k=>`<line x1="${a+k*1.4}" y1="${b+6}" x2="${c+k}" y2="${d+3}" stroke="#8a5f30" stroke-width="1.2"/>`).join('')}${[10,22].map(k=>`<path d="M${a-32+k*.3} ${b+k} Q${a} ${b+k+12} ${a+32-k*.3} ${b+k}" fill="none" stroke="#8a5f30" stroke-width="1.2"/>`).join('')}<ellipse cx="${a}" cy="${b}" rx="34" ry="17" fill="#5a3a1c" class="ol"/><path d="M${a-24} ${b+2} q14 -16 30 -4 q10 -8 16 4" fill="#e85d75" stroke="#7a2a3a"/><path d="M${a-10} ${b+4} q10 -12 24 -2" fill="#5ab0e0" stroke="#2a5a7a"/><g id="socks"></g>
+<g id="sockmon" class="egg"><g class="peek"><path d="M${a-6} ${b+2} q0 -22 8 -26 q8 -2 9 8 l0 18Z" fill="#fff4dc" stroke="#333"/><path d="M${a-5} ${b-6} l16 0" stroke="#e85d75" stroke-width="3"/><circle cx="${a+1}" cy="${b-16}" r="1.8" fill="#111"/><circle cx="${a+7}" cy="${b-16}" r="1.8" fill="#111"/></g></g>`};
+s+=obj('basket','Laundry basket — toss a sock',bk(1.8,4.6),hitC(1.8,4.6,.5,44));
+// washers
+const W=[['D',0,0,'#e8e2d4'],['E',1,0,'#f3a99e'],['F',2,0,'#9ed3c6'],['A',0,1,'#f5b851'],['B',1,1,'#9ed3c6'],['C',2,1,'#e8e2d4']];
+const CL={A:'#e85d75',B:'#5ab0e0',C:'#ffd25a',D:'#7ac46a',E:'#ffffff',F:'#b07ad8'};
+for(const[id,c,r,col]of W){const x=2.6+c*1.6,z=r*1.6;
+ s+=obj('washer-'+id,`Washer ${id}${id==='A'?' — focus timer: start/pause':' — SIM cycle'}`,`<g class="wbody">${box(x,.2,z,1.6,1.5,1.6,col)}</g><g transform="${XZ(x,1.7,z+1.6)}"><rect width="1.6" height=".45" fill="rgba(0,0,0,.12)"/><line x1="0" y1=".45" x2="1.6" y2=".45" stroke="var(--ln)" stroke-width="1"/><circle cx=".3" cy=".23" r=".14" fill="#e9edf0" stroke="#555" stroke-width="1"/><line x1=".3" y1=".23" x2=".3" y2=".11" stroke="#333" stroke-width="1.4"/><rect class="lcd" x=".6" y=".08" width=".9" height=".3" rx=".03"/><text class="lcdt rt" id="lcd-${id}" x="1.05" y=".31">--:--</text>
+<circle class="door" cx=".8" cy="1.0" r=".46"/><g class="drum"><circle class="glass" cx=".8" cy="1.0" r=".34"/><path d="M.5 1.05 Q.8 .9 1.1 1.05 L1.08 1.2 Q.8 1.34 .52 1.2Z" fill="${CL[id]}" stroke="rgba(0,0,0,.3)" stroke-width=".8"/><circle cx=".66" cy=".86" r=".05" fill="#ffd25a"/><path d="M.62 .78 a.28 .28 0 0 1 .3 -.06" stroke="#fff" stroke-width="1.4" fill="none" opacity=".5"/></g>${id==='A'?'<rect x="0" y="1.5" width="1.6" height=".1" fill="#e85d3a"/>':''}</g>`,hitP([[x,1.7,z],[x+1.6,1.7,z],[x+1.6,1.7,z+1.6],[x,1.7,z+1.6]]));}
+// cat egg
+const[cx,cy]=P(3.4,0.9,3.2);s+=`<g id="cat" class="egg obj" data-obj="cat" tabindex="0" role="button" aria-label="Sleeping cat"><ellipse cx="${cx}" cy="${cy}" rx="22" ry="10" fill="#f0a050" stroke="#5a3010"/><path d="M${cx-14} ${cy-2} q-6 10 10 10" fill="none" stroke="#5a3010" stroke-width="3"/><path d="M${cx+12} ${cy-6} l3 -9 l4 7 l3 -7 l2 10" fill="#f0a050" stroke="#5a3010"/><text class="rt" x="${cx+20}" y="${cy-18}" style="font:600 12px ui-monospace,monospace;fill:#fff">z z</text><circle class="hit" cx="${cx}" cy="${cy-4}" r="45"/></g>`;
+// counter + coffee
+s+=obj('coffee','Coffee machine — brew a cup',`${box(7.95,0.2,0,1.9,1.4,1.7,'#a86f45')}<polyline class="ln" points="${pts([[8.9,1.6,0.15],[8.9,1.6,1.55]])}"/>${box(8.3,0.35,1.7,0.9,0.85,1.0,'#c8402e')}${box(8.35,0.45,2.7,0.8,0.5,0.15,'#9aa3aa')}<g transform="${XZ(8.3,1.2,2.7)}"><rect x=".12" y=".1" width=".66" height=".25" class="lcd"/><text class="lcdt rt" style="font-size:.16px" x=".45" y=".28" id="cupn">0 cups</text><rect x=".25" y=".45" width=".4" height=".08" fill="#333"/></g>
+<g transform="${XZ(8.6,1.05,2.0)}"><path d="M0 0 L.3 0 L.27 .3 L.03 .3Z" fill="#fff" stroke="#555" stroke-width="1"/></g>
+<g class="steam" stroke="#fff" stroke-width="1.6" fill="none"><path d="M${P(8.75,1.05,2.1)[0]} ${P(8.75,1.05,2.1)[1]} q-4 -6 0 -12 q4 -6 0 -12"/><path d="M${P(8.75,1.05,2.1)[0]+6} ${P(8.75,1.05,2.1)[1]-2} q-4 -6 0 -12"/></g>`,hitC(8.75,0.8,2.3,44));
+// plant
+const pl=(x,y)=>{const[a,b]=P(x,y,0.9),[c,d]=P(x,y,0);return `<path class="ol" fill="#c8673a" d="M${a-20} ${b} L${c-14} ${d} L${c+14} ${d} L${a+20} ${b}Z"/><ellipse cx="${a}" cy="${b}" rx="20" ry="6" fill="#5a3418"/><g id="leaves">${[[-14,-18],[0,-30],[14,-16],[-6,-40],[10,-38]].map(([u,v],i)=>`<ellipse class="leaf" cx="${a+u}" cy="${b+v}" rx="10" ry="14" fill="${['#4f9a4f','#5fb05a','#3f8a46','#6cc062','#4a9a50'][i]}" stroke="#24502a" transform="rotate(${u} ${a+u} ${b+v})"/>`).join('')}</g>`};
+s+=obj('plant','Potted plant — water it',pl(9.3,4.4),hitC(9.3,4.4,1.2,44));
+// pendant lamps
+const lamp=(x,y)=>{const[a,b]=P(x,y,3.6),[a2,b2]=P(x,y,7.3);return `<line x1="${a}" y1="${b2}" x2="${a}" y2="${b}" stroke="#333" stroke-width="1.2"/><path d="M${a-18} ${b+14} L${a-6} ${b} L${a+6} ${b} L${a+18} ${b+14}Z" fill="#2f5d50" stroke="#14302a"/><ellipse cx="${a}" cy="${b+15}" rx="18" ry="4" fill="#ffd27a"/><ellipse class="lampglow" cx="${a}" cy="${b+22}" rx="60" ry="40" fill="url(#g-ffb347)"/>`};
+// table + stools
+const tb=(x,y)=>{const[a,b]=P(x,y,1.6),[c,d]=P(x,y,0);return `<ellipse cx="${c}" cy="${d}" rx="22" ry="11" fill="#3a2a20" class="ol"/><line x1="${a}" y1="${b}" x2="${c}" y2="${d}" stroke="#3a2a20" stroke-width="4"/><ellipse cx="${a}" cy="${b+4}" rx="50" ry="25" fill="#5a3a24"/><ellipse cx="${a}" cy="${b}" rx="50" ry="25" fill="#8a5a34" class="ol"/><g><path d="M${a-24} ${b-2} l20 -9 l18 9 l-20 9Z" fill="#3a6aa0" stroke="#1a2a40"/></g><g><rect x="${a+14}" y="${b-16}" width="10" height="12" rx="2" fill="#f4efe4" stroke="#555"/></g><g id="folded" class="egg">${[0,1,2].map(i=>`<path d="M${a-6} ${b+4-i*5} l12 -5 l12 5 l-12 5Z" fill="${['#c9a37a','#7a9ec9','#f3ece0'][i]}" stroke="#333"/>`).join('')}</g>`};
+s+=obj('table','Café table — read the book',tb(4.6,5.9),hitC(4.6,5.9,1.6,44));
+const st=(x,y,id,col)=>{const[a,b]=P(x,y,1.0),[c,d]=P(x,y,0);return obj(id,'Stool — give it a spin',`<g class="sg"><ellipse cx="${c}" cy="${d}" rx="15" ry="7" fill="#333" class="ol"/><line x1="${a}" y1="${b}" x2="${c}" y2="${d}" stroke="#bfc4c8" stroke-width="3"/><ellipse cx="${a}" cy="${b+18}" rx="13" ry="6" fill="none" stroke="#bfc4c8" stroke-width="1.6"/><ellipse cx="${a}" cy="${b+3}" rx="20" ry="10" fill="${shade(col,.7)}"/><ellipse cx="${a}" cy="${b}" rx="20" ry="10" fill="${col}" class="ol"/></g>`,hitC(x,y,.5,44))};
+s+=st(3.2,7.4,'stool-1','#e0503a')+st(6.2,6.6,'stool-2','#2e9a8a');
+s+=lamp(4.2,5.4)+lamp(5.2,6.4);
+// umbrella egg
+const[ux,uy]=P(8.3,9.4,0);s+=`<g id="umbrella" class="egg"><rect x="${ux-8}" y="${uy-26}" width="16" height="26" fill="#2f5d50" stroke="#14302a"/><path d="M${ux-2} ${uy-26} l-4 -30 q8 -4 10 2 l-2 28" fill="#e0503a" stroke="#7a2010"/><path d="M${ux+3} ${uy-26} l3 -34" stroke="#ffd25a" stroke-width="2.4"/></g>`;
+// sign
+s+=obj('sign',"\u201cWhat's new\u201d sign",`<polyline class="ln" points="${pts([[8.15,7.5,0],[8.15,7.65,2.3],[8.15,8.2,0]])}" style="stroke:#3a2a20;stroke-width:2"/><polyline class="ln" points="${pts([[9.55,7.5,0],[9.55,7.65,2.3],[9.55,8.2,0]])}" style="stroke:#3a2a20;stroke-width:2"/><g transform="${XZ(8.1,7.7,2.4)}"><rect width="1.5" height="1.75" rx=".05" fill="#2d2a26"/><rect class="signp" x=".1" y=".1" width="1.3" height="1.55"/><text class="signt rt" x=".2" y=".42">what's new</text>${[0,1,2,3].map(i=>`<line x1=".2" y1="${.62+i*.24}" x2="${1.0+(i%2)*.2}" y2="${.62+i*.24}" stroke="${['#e85d75','#5ab0e0','#7ac46a','#ffb347'][i]}" stroke-width="2"/>`).join('')}</g>`,hitP([[8.1,7.7,0.6],[9.6,7.7,0.6],[9.6,7.7,2.4],[8.1,7.7,2.4]]));
+// mode tint (multiply) — keeps hit-testing untouched
+s+=`<rect id="tint" x="-100" y="-100" width="1200" height="1000"/>`;
+// glows that sit above the tint
+s+=`<g style="pointer-events:none">${glowAt(4.7,5.9,1.6,120,60,'#ffb347',.5)}</g>`;
+// disco fx
+const[bx,by]=P(5,5,6.2);const beams=[[1,8],[3,9.5],[6,9.5],[9,8],[9.5,4],[2,3],[7,6]].map(([x,y],i)=>{const[a,b]=P(x,y,0),[a2,b2]=P(x+.9,y-.6,0);return `<polygon class="beam" points="${bx},${by} ${a},${b} ${a2},${b2}" fill="hsl(${i*52},100%,60%)"/>`}).join('');
+const sparks=Array.from({length:30},(_,i)=>{const[a,b]=P((i*3.7)%9.6+.2,(i*2.3)%9.6+.2,0);return `<path class="spark" style="animation-delay:${(i*.13%1).toFixed(2)}s" d="M${a} ${b-6} L${a+1.6} ${b-1.6} L${a+6} ${b} L${a+1.6} ${b+1.6} L${a} ${b+6} L${a-1.6} ${b+1.6} L${a-6} ${b} L${a-1.6} ${b-1.6}Z"/>`}).join('');
+const spots=[[2.5,6,'#ff3aa0'],[6.5,8,'#3ad0ff'],[7.5,4.5,'#ffe03a'],[4,3,'#7aff5a']].map(([x,y,c])=>{const[a,b]=P(x,y,0);return `<ellipse class="spot" cx="${a}" cy="${b}" rx="70" ry="35" fill="${c}"/>`}).join('');
+s+=`<g id="discofx">${spots}${beams}${sparks}<line x1="${bx}" y1="-10" x2="${bx}" y2="${by-18}" stroke="#ccc"/><circle cx="${bx}" cy="${by}" r="18" fill="url(#ballg)" stroke="#555"/>${[-12,-6,0,6,12].map(k=>`<line x1="${bx+k}" y1="${by-Math.sqrt(324-k*k)}" x2="${bx+k}" y2="${by+Math.sqrt(324-k*k)}" stroke="#666" stroke-width=".6"/><line x1="${bx-Math.sqrt(324-k*k)}" y1="${by+k}" x2="${bx+Math.sqrt(324-k*k)}" y2="${by+k}" stroke="#666" stroke-width=".6"/>`).join('')}</g>`;
+s+=`<g id="bubbles"></g></g>`;
+const svg=document.getElementById('scene');svg.innerHTML=s;
+const $=id=>document.getElementById(id),root=document.documentElement,room=$('room');
+// ---------- state / util ----------
+const q=new URLSearchParams(location.search),LS=localStorage;
+const st8={hour:null,wx:null,sim:new Set(),eggs:new Set(JSON.parse(LS.getItem('nw-eggs')||'[]')),unitF:LS.getItem('nw-unit')!=='C',loads:+(LS.getItem('nw-loads-'+new Date().toDateString())||0),cups:0,lastAct:Date.now(),idleFired:false,tv:0,leaves:5,socks:0,lat:33.7455,lon:-117.8677,place:'SANTA ANA',weather:null};
+const log=(m)=>{const l=$('log'),p=document.createElement('p');p.textContent=m;l.prepend(p);while(l.children.length>5)l.lastChild.remove()};
+const EGGS={cat:'Night-shift cat',golden:'Golden hour',rain:'Rainy-day umbrella',snow:'Snow day',disco:'Spin-cycle disco',jackpot:'Nixie jackpot',caffeine:'Over-caffeinated',sock:'The lost sock',folded:'Fresh-folded laundry',suds:'Suds!'};
+function egg(k,msg){if(!st8.eggs.has(k)){st8.eggs.add(k);LS.setItem('nw-eggs',JSON.stringify([...st8.eggs]));log('🥚 Egg found: '+EGGS[k]+' — '+msg)}else log('🥚 '+EGGS[k]+' — '+msg);$('eggc').textContent=`🥚 ${st8.eggs.size}/10`}
+$('eggc').textContent=`🥚 ${st8.eggs.size}/10`;
+let actx;const beep=(f=660,d=.15,n=1)=>{try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();for(let i=0;i<n;i++){const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=f;g.gain.setValueAtTime(.08,actx.currentTime+i*.22);g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+i*.22+d);o.connect(g).connect(actx.destination);o.start(actx.currentTime+i*.22);o.stop(actx.currentTime+i*.22+d+.02)}}catch(e){}};
+const fmt=s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+const hourNow=()=>st8.hour??new Date().getHours();
+const recent=(arr,n,ms)=>{const t=Date.now();arr.push(t);while(arr.length&&t-arr[0]>ms)arr.shift();return arr.length>=n};
+function simBadge(){const s=[...st8.sim];$('ctag').className='tag '+(st8.hour!=null?'sim':'live');$('ctag').textContent=st8.hour!=null?'SIM hour '+st8.hour:'LIVE'}
+
+// ---------- pomodoro (washer A) ----------
+const pomo={mode:'work',left:25*60,running:false,end:0,done:+(LS.getItem('nw-done')||0)};
+const dur=m=>60*Math.max(1,+(m==='work'?$('pwork').value:$('pbreak').value)||1);
+function pRender(){const t=fmt(pomo.left),wa=$('o-washer-A');wa.classList.add('washer');$('ptime').textContent=t;$('lcd-A').textContent=t;
+ $('pmode').textContent=pomo.mode==='work'?'Wash cycle · focus':'Spin-dry · break';
+ $('pstart').textContent=pomo.running?'Pause':(pomo.left<dur(pomo.mode)?'Resume':'Start');
+ wa.classList.add('pomo');wa.classList.toggle('spin',pomo.running);wa.classList.toggle('on',pomo.running||pomo.left<dur(pomo.mode));wa.classList.toggle('paused',!pomo.running&&pomo.left<dur(pomo.mode));
+ $('pdone').textContent=`${pomo.done} load${pomo.done==1?'':'s'} folded`;document.title=pomo.running?`${t} · ${pomo.mode==='work'?'focus':'break'} · Night Wash`:'Night Wash · isometric laundromat'}
+function pToggle(){if(pomo.running){pomo.left=Math.max(0,Math.ceil((pomo.end-Date.now())/1000));pomo.running=false;log('Washer A paused at '+fmt(pomo.left)+'.')}else{pomo.end=Date.now()+pomo.left*1000;pomo.running=true;log(pomo.mode==='work'?'Washer A started — focus until the drum stops.':'Break cycle running — stretch.')}pRender()}
+function pReset(){pomo.running=false;pomo.left=dur(pomo.mode);log('Washer A reset.');pRender()}
+function pDone(){pomo.running=false;beep(880,.25,3);
+ if(pomo.mode==='work'){pomo.done++;LS.setItem('nw-done',pomo.done);$('folded').classList.add('show');egg('folded',`load #${pomo.done} folded on the café table. Take ${$('pbreak').value} minutes.`);pomo.mode='break'}else{pomo.mode='work';log('Break over — fresh load waiting.')}
+ pomo.left=dur(pomo.mode);pRender()}
+function pTick(){if(pomo.running){pomo.left=Math.max(0,Math.ceil((pomo.end-Date.now())/1000));if(pomo.left<=0)pDone()}pRender()}
+$('pstart').onclick=pToggle;$('preset').onclick=pReset;$('pskip').onclick=()=>{pomo.left=0;pomo.running=false;pomo.mode==='work'?(pomo.mode='break',log('Skipped to break.')):(pomo.mode='work',log('Skipped to focus.'));pomo.left=dur(pomo.mode);pRender()};
+['pwork','pbreak'].forEach(i=>$(i).onchange=()=>{if(!pomo.running){pomo.left=dur(pomo.mode);pRender()}});
+if(pomo.done>0)$('folded').classList.add('show');
+
+// ---------- SIM washers ----------
+const sims={};['B','C','D','E','F'].forEach((k,i)=>{sims[k]={end:Date.now()+[1094,1426,0,1314,0][i]*1000}});
+function simRender(){const n=Date.now();for(const k in sims){const l=Math.max(0,Math.ceil((sims[k].end-n)/1000)),el=$('o-washer-'+k);el.classList.add('washer');$('lcd-'+k).textContent=l?fmt(Math.min(l,5999)):'done';el.classList.toggle('on',l>0);el.classList.toggle('spin',l>0&&!document.body.classList.contains('lowcpu'))}}
+const combo=[],COMBO='BCFE';
+function washer(k){combo.push(k);if(combo.length>4)combo.shift();
+ if(combo.join('')===COMBO&&!disco){startDisco();return}
+ if(k==='A'){pToggle();return}
+ const sw=sims[k],l=Math.ceil((sw.end-Date.now())/1000);
+ if(l>0)log(`Washer ${k}: ${fmt(l)} left on a SIM cycle. Not yours — but nice socks.`);else{sw.end=Date.now()+(20+Math.floor(Math.random()*25))*60000;log(`Washer ${k}: started a new SIM cycle (${fmt(Math.ceil((sw.end-Date.now())/1000))}).`);beep(520,.08)}
+ simRender()}
+let disco=null;function startDisco(){combo.length=0;disco=1;theme();document.querySelectorAll('[data-obj^=washer]').forEach(e=>e.classList.add('disco'));egg('disco','B→C→F→E: every drum is dancing.');beep(440,.1,4);
+ disco=setTimeout(()=>{document.querySelectorAll('.disco').forEach(e=>e.classList.remove('disco'));disco=null;theme()},8000)}
+
+// ---------- clock / time of day ----------
+function clockTick(){const d=new Date(),h=hourNow(),m=d.getMinutes(),s=d.getSeconds();
+ const hh=st8.hour!=null?h:d.getHours();$('hh').setAttribute('transform',`rotate(${(hh%12)*30+m*.5} .6 .6)`);$('mh').setAttribute('transform',`rotate(${m*6} .6 .6)`);$('sh').setAttribute('transform',`rotate(${s*6} .6 .6)`);
+ $('clk').textContent=st8.hour!=null?`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} (SIM)`:d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
+function theme(){const h=hourNow(),night=h<6||h>=19,golden=h===17||h===18,t=disco?'disco':golden?'golden':night?'night':'day';['day','golden','night','disco'].forEach(m=>root.classList.toggle('t-'+m,m===t));$('modec').textContent=(t==='night'&&root.classList.contains('wx-rain')?'night-rain':t)+(root.classList.contains('wsim')?' · SIM weather':'')}
+function applyTime(){const h=hourNow(),golden=h===17||h===18;theme();
+ const cat=h>=0&&h<5;$('cat').classList.toggle('show',cat);if(cat&&!applyTime.cat){egg('cat','it is '+h+' a.m.; someone is napping on washer A.');}applyTime.cat=cat;
+ if(golden&&!applyTime.g)egg('golden','the window glows orange between 5 and 7 p.m.');applyTime.g=golden;simBadge()}
+
+// ---------- weather ----------
+const WMO=c=>c===0?'clear':c<=3?'partly cloudy':c<=48?'fog':c<=57?'drizzle':c<=67?'rain':c<=77?'snow':c<=82?'showers':c<=86?'snow showers':'thunderstorm';
+const isRain=c=>(c>=51&&c<=67)||(c>=80&&c<=82)||c>=95,isSnow=c=>(c>=71&&c<=77)||c===85||c===86;
+function wRender(){const w=st8.weather;if(!w){$('wtemp').textContent='--°';$('wdesc').textContent='no data';return}
+ const t=st8.unitF?w.t:(w.t-32)*5/9;$('wtemp').textContent=Math.round(t)+'°';$('wdesc').textContent=WMO(w.code);$('wloc').textContent=st8.place;
+ $('wline').textContent=`${Math.round(t)}°${st8.unitF?'F':'C'} · ${WMO(w.code)}${w.wind!=null?' · wind '+Math.round(w.wind)+' mph':''}`;
+ $('wtag').className='tag '+(w.sim?'sim':'live');$('wtag').textContent=w.sim?'SIM':'LIVE';root.classList.toggle('wsim',!!w.sim);if(w.sim)$('wsrc').textContent='SIM weather — '+(w.why||'forced/override')+' (not real Open-Meteo)';theme();
+ const r=isRain(w.code),sn=isSnow(w.code),fog=w.code>=45&&w.code<=48,cl=w.code>=2;root.classList.toggle('wx-rain',r);root.classList.toggle('wx-snow',sn);root.classList.toggle('wx-fog',fog);root.classList.toggle('wx-cloudy',cl&&!r&&!sn);root.classList.toggle('wx-clear',!cl);theme();
+ $('wi-rain').style.display=r?'':'none';$('wi-sun').style.display=w.code<=1?'':'none';$('wi-cloud').style.display=w.code<=1?'none':'';
+ $('umbrella').classList.toggle('show',r);$('puddle').classList.toggle('show',r);$('snowman').classList.toggle('show',sn);
+ if(r&&!wRender.r)egg('rain',(w.sim?'(SIM) ':'')+'it\'s raining outside, so an umbrella stand and a puddle appeared by the door.');wRender.r=r;
+ if(sn&&!wRender.s)egg('snow',(w.sim?'(SIM) ':'')+'snow outside, so a snowman is in the window.');wRender.s=sn}
+async function fetchW(){if(st8.weather&&st8.weather.sim)return;try{const u=`https://api.open-meteo.com/v1/forecast?latitude=${st8.lat}&longitude=${st8.lon}&current=temperature_2m,weather_code,is_day,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph`;
+ const j=await (await fetch(u)).json();const ct=j.current&&j.current.time,age=ct?Math.abs(Date.now()-Date.parse(ct+(/Z|[+-]\d\d:?\d\d$/.test(ct)?'':'Z'))):Infinity,ver=j.latitude!=null&&j.current_units&&age<3*3600e3;st8.weather={t:j.current.temperature_2m,code:j.current.weather_code,wind:j.current.wind_speed_10m,sim:!ver,why:ver?'':'unverified response'};$('wsrc').textContent=`Open-Meteo · ${st8.place.toLowerCase()} · updated ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`}catch(e){$('wline').textContent='Weather unavailable (offline?) — nothing simulated.';$('wtag').textContent='OFF';$('wtag').className='tag';root.classList.remove('wsim')}wRender()}
+$('unit').onclick=()=>{st8.unitF=!st8.unitF;LS.setItem('nw-unit',st8.unitF?'F':'C');wRender()};
+$('geo').onclick=()=>{if(!navigator.geolocation)return log('No geolocation in this browser.');navigator.geolocation.getCurrentPosition(p=>{st8.lat=+p.coords.latitude.toFixed(3);st8.lon=+p.coords.longitude.toFixed(3);st8.place='YOUR SPOT';log('Weather now follows your location.');fetchW()},()=>log('Location denied — staying with Santa Ana.'),{timeout:8000})};
+
+// ---------- object actions ----------
+const TV=[['static',()=>[...Array(14)].map((_,i)=>`<rect x="${.15+(i*.37)%1.1}" y="${.18+(i*.29)%.8}" width=".12" height=".03" fill="#bbb" opacity=".6"/>`).join(''),'Channel 2: static. Someone should fix the antenna.'],
+ ['bars',()=>['#c33','#cc3','#3c3','#3cc','#33c','#c3c'].map((c,i)=>`<rect x="${.15+i*.19}" y=".17" width=".19" height=".85" fill="${c}" opacity=".7"/>`).join(''),'Channel 3: test pattern. Nothing is on at this hour.'],
+ ['wx',()=>`<text class="rt" x=".25" y=".55" style="font:600 .22px ui-monospace,monospace;fill:#8cf">WX</text><text class="rt" x=".25" y=".88" style="font:600 .2px ui-monospace,monospace;fill:#fff">${$('wtemp').textContent} ${$('wdesc').textContent}</text>`,'Channel 4: the local weather report (live data).'],
+ ['cam',()=>`<rect x=".15" y=".17" width="1.15" height=".85" fill="#1d1a14"/><circle cx=".72" cy=".6" r=".2" fill="none" stroke="#f2a33a" stroke-width="1"/><text class="rt" x=".2" y=".32" style="font:.12px ui-monospace;fill:#f55">● REC</text>`,'Channel 5: the security cam… it\'s just washer A.'],
+ ['off',()=>'','TV off. The quiet hum of dryers.']];
+function tvRender(){$('tvc').innerHTML=TV[st8.tv][1]()}
+const HAIKU=['spin cycle at night / one red sock among the white / everything is pink','rain taps the window / the dryer hums the same note / my shirts get warm first','twenty-five minutes / the drum turns and so do I / then a little break'];
+const A={
+ window(){svg.classList.toggle('blinded');log(svg.classList.contains('blinded')?'Blinds down.':'Blinds up — '+(st8.weather?`${$('wline').textContent} out there.`:'the street is quiet.'))},
+ weather(){st8.unitF=!st8.unitF;LS.setItem('nw-unit',st8.unitF?'F':'C');wRender();fetchW();log('Weather panel: switched to °'+(st8.unitF?'F':'C')+' and refreshed from Open-Meteo.')},
+ tv(){st8.tv=(st8.tv+1)%TV.length;tvRender();log(TV[st8.tv][2])},
+ nixie(){st8.loads++;LS.setItem('nw-loads-'+new Date().toDateString(),st8.loads);nixRender(st8.loads);if(recent(A.nt||(A.nt=[]),7,4000)){A.nt.length=0;nixRender(7777,true);egg('jackpot','7 taps in 4 s rolled the tubes to 7777. Coins everywhere.');beep(990,.08,6);setTimeout(()=>nixRender(st8.loads),3000)}else log(`Loads counter: ${st8.loads} today (tap counts your loads).`)},
+ clock(){const d=new Date();log(`It's ${d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})} here. ${hourNow()<6||hourNow()>=19?'Late-night laundry is the best laundry.':'Daytime rush — grab a machine.'}`);beep(1200,.04,2)},
+ mat(){const h=hourNow();log(h<5?'Welcome, night owl.':h<12?'Good morning! Coffee is on the counter.':h<18?'Good afternoon — machines A and D are free.':'Good evening. Bring a book.');beep(1400,.06,2)},
+ basket(){st8.socks++;const g=$('socks'),[a,b]=P(1.8,4.6,1.0);g.insertAdjacentHTML('beforeend',`<path d="M${a-14+Math.random()*24} ${b-3+Math.random()*4} l6 0 l0 5 l4 0" stroke="${['#d66','#6ad','#dd6','#ddd'][st8.socks%4]}" stroke-width="3" fill="none"/>`);if(g.children.length>8)g.firstChild.remove();if($('sockmon').classList.contains('show')){$('sockmon').classList.remove('show');egg('sock','you caught the lost sock. It was here all along.')}else log(`Tossed sock #${st8.socks} into the basket. Its partner is… somewhere.`)},
+ coffee(){st8.cups++;$('cupn').textContent=st8.cups+(st8.cups==1?' cup':' cups');const c=$('o-coffee');c.classList.add('brewing');clearTimeout(A.ct);A.ct=setTimeout(()=>c.classList.remove('brewing'),3000);beep(300,.2);
+  if(recent(A.cc||(A.cc=[]),3,8000)){A.cc.length=0;room.classList.add('jitter');setTimeout(()=>room.classList.remove('jitter'),2500);egg('caffeine','3 cups in 8 seconds. The whole room is vibrating.')}else log(`Brewing cup #${st8.cups}. ☕`)},
+ plant(){st8.leaves=st8.leaves>=9?5:st8.leaves+1;const L=$('leaves'),[a,b]=P(9.3,4.4,.9);L.querySelectorAll('.extra').forEach(e=>e.remove());for(let i=5;i<st8.leaves;i++)L.insertAdjacentHTML('beforeend',`<ellipse class="extra" cx="${a-16+((i*13)%32)}" cy="${b-46-((i*7)%14)}" rx="8" ry="11" fill="#23331f" stroke="#7a9a62"/>`);log(st8.leaves===5?'Pruned the plant back.':'Watered the plant. A new leaf!')},
+ table(){log('📖 '+HAIKU[(A.hi=((A.hi??-1)+1)%HAIKU.length)])},
+ sign(){$('dlgb').innerHTML=`<h3>what's new</h3><ul><li><b>Washer A</b> is now a focus timer (25/5). Tap it.</li><li>Window &amp; weather panel show <b>live</b> weather (Open-Meteo).</li><li>The wall clock tells the real time.</li><li>Washers B–F are <b>SIM</b> cycles.</li><li>There are 10 secrets in this room. ${st8.eggs.size} found.</li></ul>`;$('dlg').showModal()},
+ 'stool-1'(){spinStool('stool-1')},'stool-2'(){spinStool('stool-2')},
+ cat(){log('Prrrrr. The cat opens one eye and goes back to sleep.');beep(120,.4)}
+};
+function spinStool(id){const g=$('o-'+id).querySelector('.sg');g.classList.remove('stoolspin');void g.getBBox();g.classList.add('stoolspin');log('Wheee — the stool squeaks.')}
+function nixRender(n,hot){const s=String(n%10000).padStart(4,'0');for(let i=0;i<4;i++)$('nx'+i).textContent=s[i];document.querySelectorAll('.nixt').forEach(t=>t.style.fill=hot?'#ffe08a':'')}
+nixRender(st8.loads);tvRender();
+
+// dispatch
+function activity(){st8.lastAct=Date.now();if(st8.idleFired){st8.idleFired=false;room.style.opacity=''}}
+svg.addEventListener('mousedown',e=>{if(e.target.closest('.obj'))e.preventDefault()});
+svg.addEventListener('click',e=>{if(e.detail>0&&document.activeElement&&document.activeElement.closest&&document.activeElement.closest('.obj'))document.activeElement.blur();const o=e.target.closest('.obj');if(!o)return;const id=o.dataset.obj;o.classList.add('press');setTimeout(()=>o.classList.remove('press'),140);
+ if(id.startsWith('washer-'))washer(id.slice(7));else A[id]&&A[id]()});
+svg.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.closest('.obj')){e.preventDefault();e.target.closest('.obj').dispatchEvent(new MouseEvent('click',{bubbles:true}))}});
+['pointerdown','keydown','wheel','touchstart'].forEach(t=>addEventListener(t,activity,{passive:true}));
+let typed='';addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;typed=(typed+e.key.toLowerCase()).slice(-4);if(typed==='suds')suds()});
+function suds(){const g=$('bubbles');for(let i=0;i<14;i++){const[a,b]=P(3+Math.random()*4.6,2,Math.random()*2.5);g.insertAdjacentHTML('beforeend',`<circle class="bub" cx="${a}" cy="${b}" r="${4+Math.random()*8}" style="animation-delay:${(Math.random()*1.2).toFixed(2)}s"/>`)}setTimeout(()=>g.innerHTML='',5600);egg('suds','you typed s-u-d-s. Bubbles!')}
+function idleCheck(){if(!st8.idleFired&&Date.now()-st8.lastAct>45000){st8.idleFired=true;$('sockmon').classList.add('show');log('…something is peeking out of the laundry basket. (idle 45 s)')}}
+
+// main 1 s loop (only DOM text updates; animations are CSS)
+function loop(){pTick();simRender();clockTick();idleCheck();const h=hourNow();if(h!==loop.h){loop.h=h;applyTime()}}
+document.addEventListener('visibilitychange',()=>document.body.classList.toggle('paused-all',document.hidden));
+// test hooks / URL overrides (all labelled SIM)
+if(q.has('hour'))st8.hour=+q.get('hour');
+const wxq=q.get('wx');const setWeather=(code,t=57)=>{st8.weather={t,code,wind:6,sim:true,why:wxq?'?wx= override':'test hook'};wRender()};
+window.LAUNDRO={setHour(h){st8.hour=h;loop.h=-1;loop()},setWeather,liveWeather(){st8.weather=null;fetchW()},ff(s){if(pomo.running)pomo.end-=s*1000;else pomo.left=Math.max(0,pomo.left-s);if(!pomo.running&&pomo.left===0)pDone();loop()},idle(){st8.lastAct=0;idleCheck()},
+ state:()=>({pomo:{...pomo},eggs:[...st8.eggs],hour:hourNow(),weather:st8.weather,tv:st8.tv,cups:st8.cups,loads:st8.loads,socks:st8.socks,leaves:st8.leaves}),resetEggs(){st8.eggs.clear();LS.removeItem('nw-eggs');$('eggc').textContent='🥚 0/10'}};
+pomo.left=dur('work');loop();setInterval(loop,1000);
+if(wxq)setWeather({rain:63,snow:73,clear:0}[wxq]??0);fetchW();setInterval(fetchW,15*60000);
+})();
+</script>
+</body>
+</html>
