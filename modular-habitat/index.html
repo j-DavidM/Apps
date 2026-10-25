@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no"/>
+<title>Modular Habitat</title>
+<style>
+:root{
+  --bg:#fff; --ink:#111; --muted:#666; --line:#ddd;
+  --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
+  --sl:env(safe-area-inset-left,0px); --sr:env(safe-area-inset-right,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+  font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-tap-highlight-color:transparent}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.hud{position:fixed;inset:0;z-index:10;pointer-events:none;
+  padding:calc(14px + var(--st)) calc(16px + var(--sr)) calc(14px + var(--sb)) calc(16px + var(--sl))}
+.hud *{pointer-events:auto}
+.brand{position:absolute;top:calc(14px + var(--st));left:calc(18px + var(--sl))}
+.brand h1{font-size:clamp(22px,4.2vw,40px);font-weight:800;letter-spacing:-.04em;line-height:1}
+.tag{position:absolute;top:calc(18px + var(--st));right:calc(18px + var(--sr));
+  text-align:right;font-size:12px;line-height:1.45;color:var(--muted);max-width:230px}
+.tag strong{display:block;color:var(--ink);font-weight:600}
+.side{position:absolute;top:50%;right:calc(18px + var(--sr));transform:translateY(-50%);
+  width:min(248px,28vw)}
+.side .kicker{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.side h2{font-size:22px;font-weight:600;letter-spacing:-.02em;margin-bottom:10px}
+.side p{font-size:12px;line-height:1.5;color:#444;margin-bottom:12px}
+.side .stats{font-size:11px;color:var(--muted);margin-bottom:16px}
+.explore{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.explore span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.arrows{display:flex;flex-direction:column;gap:4px}
+.arrows button,.bar button,#infoBtn{
+  border:1px solid #111;background:#fff;color:#111;cursor:pointer;
+  font:inherit;border-radius:2px;padding:6px 10px;line-height:1}
+.arrows button{width:34px;height:28px;padding:0;font-size:14px}
+.arrows button:active,.bar button:active{background:#111;color:#fff}
+.bar{position:absolute;left:calc(14px + var(--sl));right:calc(14px + var(--sr));
+  bottom:calc(12px + var(--sb));display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.level{font-size:12px;font-weight:600;letter-spacing:.04em;min-width:170px}
+.bar .spacer{flex:1}
+.bar button.on{background:#111;color:#fff}
+.bar button.ghost{background:transparent}
+.bar button.primary{background:#111;color:#fff}
+.bar button:disabled{opacity:.35;cursor:default}
+.rec{font-size:10px;color:var(--muted);letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.iso{font-size:11px}
+#infoBtn{display:none;position:absolute;top:calc(14px + var(--st));right:calc(14px + var(--sr));
+  width:34px;height:34px;border-radius:50%;font-weight:700}
+.drawer{display:none;position:absolute;top:calc(56px + var(--st));right:calc(14px + var(--sr));
+  width:min(280px,86vw);background:#fff;border:1px solid #111;padding:14px;box-shadow:0 8px 24px #0001;max-height:70vh;overflow:auto}
+.drawer.open{display:block}
+@media (max-width:820px){
+  .side,.tag{display:none}
+  #infoBtn{display:block}
+  .brand h1{font-size:22px}
+  .level{min-width:auto;font-size:11px}
+  .bar{gap:6px}
+  .bar button{padding:7px 8px;font-size:11px}
+  .rec{display:none}
+}
+
+@media (max-width:820px){
+  .bar button#btnStop{padding:7px 6px;font-size:10px}
+  body.compact-chrome .tag{display:none}
+  body.compact-chrome .brand h1{font-size:18px}
+  body.compact-chrome .rec{display:none}
+  body.compact-chrome .bar{gap:4px}
+  body.compact-chrome .level{font-size:10px;max-width:42vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  body.compact-chrome .iso{display:none}
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud">
+  <div class="brand"><h1>MODULAR HABITAT</h1></div>
+  <div class="tag"><strong>A building within a building.</strong> Six levels. Six ways of living.</div>
+  <button id="infoBtn" type="button" aria-label="Info">ⓘ</button>
+  <div class="drawer" id="drawer"></div>
+  <aside class="side" id="side">
+    <div class="kicker" id="sideKicker">SIX WAYS OF LIVING</div>
+    <h2 id="sideTitle">Modular Habitat</h2>
+    <p id="sideBlurb">Six stacked apartments — studios to two-beds — with kitchens, studies, galleries and terrace access. Explore each level, then step inside.</p>
+    <div class="stats" id="sideStats">6 apartments · 32 spaces</div>
+    <div class="explore">
+      <div class="arrows">
+        <button type="button" id="floorUp" aria-label="Floor up">▲</button>
+        <button type="button" id="floorDown" aria-label="Floor down">▼</button>
+      </div>
+      <span id="exploreLabel">EXPLORE FLOORS</span>
+    </div>
+    <div class="explore" id="roomExplore" style="display:none">
+      <div class="arrows">
+        <button type="button" id="roomUp" aria-label="Room next">▲</button>
+        <button type="button" id="roomDown" aria-label="Room prev">▼</button>
+      </div>
+      <span>EXPLORE ROOMS</span>
+    </div>
+  </aside>
+  <div class="bar">
+    <div class="level" id="levelLabel">01 — THE WHOLE HABITAT</div>
+    <button type="button" id="btnPeople" class="on" aria-pressed="true">Ⅱ People</button>
+    <button type="button" id="btnBack" class="ghost" disabled>← Back</button>
+    <button type="button" id="btnDisassemble" class="primary">◢ Disassemble</button>
+    <button type="button" id="btnStop" aria-label="Download PNG" class="ghost">Download PNG</button>
+    <div class="spacer"></div>
+    <div class="rec" id="rec" title="Session elapsed">Session 0:00</div>
+    <button type="button" id="btnIso" class="on iso" aria-pressed="true">● Isometric</button>
+  </div>
+</div>
+<script type="importmap">
+{"imports":{
+  "three":"https://unpkg.com/three@0.170.0/build/three.module.js",
+  "three/addons/":"https://unpkg.com/three@0.170.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const FLOOR_H = 3.15;
+const FLOORS = 6;
+const FLOOR_META = [
+  { code:'02', title:'Ground Studio', blurb:'An open studio with gallery entry, compact kitchen and a sleeping niche facing the courtyard.', spaces:5, rooms:['Entry','Kitchen','Live','Sleep','Bath'] },
+  { code:'03', title:'Gallery Loft', blurb:'Double-aspect loft with a study nook, long shelf wall and a narrow balcony over the stair.', spaces:6, rooms:['Gallery','Study','Live','Kitchen','Bath','Balcony'] },
+  { code:'04', title:'Study Flat', blurb:'Quiet one-bed with a deep work desk, book wall and morning light from the east module.', spaces:5, rooms:['Entry','Study','Live','Sleep','Kitchen'] },
+  { code:'05', title:'Family Two-Bed', blurb:'Two bedrooms, shared kitchen table and a balcony for plants — the largest footprint.', spaces:7, rooms:['Entry','Kitchen','Live','Bed A','Bed B','Bath','Balcony'] },
+  { code:'06', title:'Sky Loft', blurb:'Upper loft with home gym corner, long dining table and glass looking over the stair void.', spaces:5, rooms:['Live','Gym','Kitchen','Sleep','Bath'] },
+  { code:'07', title:'Penthouse Terrace', blurb:'Top apartment opening onto the roof terrace — utility shed, chimney and planted pergola.', spaces:4, rooms:['Live','Kitchen','Sleep','Terrace'] }
+];
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:false, preserveDrawingBuffer:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0xffffff, 1);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xffffff);
+
+let useIso = true;
+const aspect = () => canvas.clientWidth / Math.max(1, canvas.clientHeight);
+function makeOrtho() {
+  const fr = 18, a = aspect();
+  const cam = new THREE.OrthographicCamera(-fr*a, fr*a, fr, -fr, 0.1, 200);
+  cam.position.set(30, 26, 30);
+  cam.lookAt(0, 8, 0);
+  cam.zoom = 1;
+  cam.updateProjectionMatrix();
+  return cam;
+}
+function makePersp() {
+  const cam = new THREE.PerspectiveCamera(35, aspect(), 0.1, 200);
+  cam.position.set(30, 26, 30);
+  cam.lookAt(0, 8, 0);
+  return cam;
+}
+let camera = makeOrtho();
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 5;
+controls.maxDistance = 70;
+// polar mostly locked (isometric feel)
+controls.minPolarAngle = Math.PI / 2 - 0.62;
+controls.maxPolarAngle = Math.PI / 2 - 0.48;
+controls.target.set(0, 8, 0);
+controls.update();
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.62));
+const dir = new THREE.DirectionalLight(0xffffff, 0.78);
+dir.position.set(20, 34, 14);
+dir.castShadow = true;
+dir.shadow.mapSize.set(1024, 1024);
+dir.shadow.camera.near = 1; dir.shadow.camera.far = 80;
+dir.shadow.camera.left = -30; dir.shadow.camera.right = 30;
+dir.shadow.camera.top = 30; dir.shadow.camera.bottom = -30;
+dir.shadow.radius = 3;
+scene.add(dir);
+const fill = new THREE.DirectionalLight(0xffffff, 0.22);
+fill.position.set(-14, 12, -18);
+scene.add(fill);
+
+// Materials — matte architectural
+const matWall = new THREE.MeshStandardMaterial({ color:0xf0f0f0, roughness:0.92, metalness:0.02 });
+const matSlab = new THREE.MeshStandardMaterial({ color:0xe6e6e6, roughness:0.95, metalness:0.0 });
+const matDark = new THREE.MeshStandardMaterial({ color:0x3a3a3a, roughness:0.85, metalness:0.05 });
+const matFrame = new THREE.MeshStandardMaterial({ color:0x222222, roughness:0.7, metalness:0.1 });
+const matMid = new THREE.MeshStandardMaterial({ color:0xbdbdbd, roughness:0.9, metalness:0.0 });
+const matFurn = new THREE.MeshStandardMaterial({ color:0x9a9a9a, roughness:0.88, metalness:0.0 });
+const matPlant = new THREE.MeshStandardMaterial({ color:0x6e6e6e, roughness:0.95, metalness:0.0 });
+const matChar = new THREE.MeshStandardMaterial({ color:0x2a2a2a, roughness:0.9, metalness:0.0 });
+const matGlass = new THREE.MeshPhysicalMaterial({
+  color:0xffffff, metalness:0, roughness:0.05, transmission:1.0, thickness:0.35,
+  transparent:true, opacity:0.35, depthWrite:false, side:THREE.DoubleSide
+});
+const edgeMat = new THREE.LineBasicMaterial({ color:0x111111 });
+const linkMat = new THREE.LineBasicMaterial({ color:0x888888, transparent:true, opacity:0.45 });
+
+function addEdges(mesh, threshold=18) {
+  const eg = new THREE.EdgesGeometry(mesh.geometry, threshold);
+  const lines = new THREE.LineSegments(eg, edgeMat);
+  mesh.add(lines);
+  return mesh;
+}
+function boxMesh(w,h,d, mat, x=0,y=0,z=0, edges=true) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
+  m.position.set(x,y,z);
+  m.castShadow = true; m.receiveShadow = true;
+  if (edges) addEdges(m);
+  return m;
+}
+function cylMesh(r,h, mat, x=0,y=0,z=0, segs=10) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,segs), mat);
+  m.position.set(x,y,z);
+  m.castShadow = true;
+  addEdges(m);
+  return m;
+}
+
+// Hierarchy: BuildingGroup → FloorGroup → RoomGroup → meshes
+const BuildingGroup = new THREE.Group();
+BuildingGroup.name = 'BuildingGroup';
+scene.add(BuildingGroup);
+
+const plinth = new THREE.Group(); plinth.name = 'Plinth';
+plinth.add(boxMesh(16, 0.55, 14, matSlab, 0, 0.275, 0));
+plinth.add(boxMesh(16.5, 0.1, 14.5, matDark, 0, 0.05, 0));
+BuildingGroup.add(plinth);
+
+function potTree(x,z) {
+  const g = new THREE.Group();
+  g.position.set(x, 0.55, z);
+  g.add(boxMesh(0.9, 0.55, 0.9, matMid, 0, 0.28, 0));
+  g.add(cylMesh(0.08, 1.35, matDark, 0, 0.98, 0, 8));
+  const canopy = new THREE.Mesh(new THREE.IcosahedronGeometry(0.62, 0), matPlant);
+  canopy.position.set(0, 1.8, 0);
+  addEdges(canopy);
+  g.add(canopy);
+  return g;
+}
+const landscaping = new THREE.Group(); landscaping.name='Landscaping';
+[[-6.8,-5.5],[6.8,-5.5],[-6.8,5.5],[6.8,5.5]].forEach(([x,z]) => landscaping.add(potTree(x,z)));
+BuildingGroup.add(landscaping);
+
+const stairs = new THREE.Group(); stairs.name = 'Stairs';
+BuildingGroup.add(stairs);
+(function buildStairs(){
+  const sx = -7.15;
+  for (let f=0; f<FLOORS; f++) {
+    const y0 = 0.55 + f*FLOOR_H;
+    const zA = f%2===0 ? -3.1 : 3.1;
+    const zB = f%2===0 ? 3.1 : -3.1;
+    stairs.add(boxMesh(1.7, 0.1, 2.1, matDark, sx, y0+0.05, zA));
+    for (let s=0; s<8; s++) {
+      const t = s/8;
+      stairs.add(boxMesh(1.45, 0.09, 0.34, matDark, sx, y0 + t*FLOOR_H, THREE.MathUtils.lerp(zA,zB,t)));
+    }
+    for (let i=0;i<=5;i++){
+      const t=i/5;
+      const z=THREE.MathUtils.lerp(zA,zB,t), y=y0+t*FLOOR_H;
+      stairs.add(cylMesh(0.025, 0.85, matFrame, sx-0.65, y+0.48, z, 6));
+    }
+    // handrail beam
+    const curve = [];
+    for (let i=0;i<=8;i++){
+      const t=i/8;
+      curve.push(new THREE.Vector3(sx-0.65, y0+t*FLOOR_H+0.9, THREE.MathUtils.lerp(zA,zB,t)));
+    }
+    const geo = new THREE.BufferGeometry().setFromPoints(curve);
+    stairs.add(new THREE.Line(geo, edgeMat));
+  }
+})();
+
+const floorGroups = [];
+const linkLines = new THREE.Group(); linkLines.name='DisassembleLinks'; linkLines.visible=false;
+BuildingGroup.add(linkLines);
+
+function makeFurniture(kind) {
+  const FurnitureGroup = new THREE.Group();
+  FurnitureGroup.name = 'FurnitureGroup';
+  const by = 0.12;
+  // table
+  FurnitureGroup.add(boxMesh(1.35, 0.07, 0.75, matFurn, -1.15, by+0.72, 0.55));
+  [[-1.65,0.25],[-0.65,0.25],[-1.65,0.85],[-0.65,0.85]].forEach(([x,z])=>{
+    FurnitureGroup.add(cylMesh(0.04, 0.72, matDark, x, by+0.36, z, 6));
+  });
+  // chairs
+  [[-1.15,1.35],[-2.0,0.55],[-0.35,0.55]].forEach(([x,z])=>{
+    FurnitureGroup.add(boxMesh(0.42, 0.07, 0.42, matFurn, x, by+0.4, z));
+    FurnitureGroup.add(boxMesh(0.42, 0.48, 0.05, matMid, x, by+0.68, z-0.18));
+  });
+  // shelf
+  FurnitureGroup.add(boxMesh(0.28, 1.55, 1.7, matMid, 3.35, by+0.88, -0.15));
+  for (let i=0;i<4;i++) FurnitureGroup.add(boxMesh(0.26, 0.03, 1.6, matDark, 3.35, by+0.28+i*0.38, -0.15));
+  // kitchen
+  FurnitureGroup.add(boxMesh(2.1, 0.88, 0.58, matDark, -2.35, by+0.44, -2.35));
+  FurnitureGroup.add(boxMesh(0.45, 0.06, 0.35, matMid, -2.7, by+0.94, -2.35));
+  if (kind==='family' || kind==='pent' || kind==='loft') {
+    FurnitureGroup.add(boxMesh(1.95, 0.32, 1.35, matFurn, 1.55, by+0.22, 1.95));
+    FurnitureGroup.add(boxMesh(2.0, 0.14, 0.32, matDark, 1.55, by+0.48, 2.5));
+  }
+  if (kind==='study' || kind==='gallery') {
+    FurnitureGroup.add(boxMesh(1.15, 0.07, 0.55, matFurn, 1.45, by+0.74, -1.75));
+    [[1.0,-1.95],[1.9,-1.95],[1.0,-1.55],[1.9,-1.55]].forEach(([x,z])=>{
+      FurnitureGroup.add(boxMesh(0.07, 0.72, 0.07, matDark, x, by+0.36, z));
+    });
+  }
+  if (kind==='studio') FurnitureGroup.add(boxMesh(1.55, 0.28, 0.85, matFurn, 1.75, by+0.2, 1.75));
+  if (kind==='loft') {
+    // gym bench
+    FurnitureGroup.add(boxMesh(1.2, 0.35, 0.45, matDark, 2.2, by+0.25, -2.0));
+  }
+  return FurnitureGroup;
+}
+
+function makePerson(kind) {
+  const g = new THREE.Group();
+  g.name = 'Character';
+  g.scale.setScalar(1.35);
+  const torso = boxMesh(0.26, 0.42, 0.16, matChar, 0, 1.02, 0);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), matChar);
+  head.position.set(0, 1.38, 0); addEdges(head);
+  const hips = boxMesh(0.24, 0.1, 0.14, matChar, 0, 0.76, 0);
+  const legL = boxMesh(0.09, 0.52, 0.09, matChar, -0.07, 0.42, 0);
+  const legR = boxMesh(0.09, 0.52, 0.09, matChar, 0.07, 0.42, 0);
+  const armL = boxMesh(0.07, 0.42, 0.07, matChar, -0.2, 1.02, 0);
+  const armR = boxMesh(0.07, 0.42, 0.07, matChar, 0.2, 1.02, 0);
+  g.add(torso, head, hips, legL, legR, armL, armR);
+  let cup = null;
+  if (kind === 'sip') {
+    cup = boxMesh(0.07, 0.09, 0.07, matMid, 0.26, 0.95, 0.12);
+    g.add(cup);
+    // seated: bent legs, lowered torso
+    legL.scale.set(1, 0.45, 1); legR.scale.set(1, 0.45, 1);
+    legL.position.set(-0.07, 0.38, 0.12); legR.position.set(0.07, 0.38, 0.12);
+    legL.rotation.x = -1.15; legR.rotation.x = -1.15;
+    // lower legs forward
+    const shinL = boxMesh(0.08, 0.38, 0.08, matChar, -0.07, 0.22, 0.32);
+    const shinR = boxMesh(0.08, 0.38, 0.08, matChar, 0.07, 0.22, 0.32);
+    g.add(shinL, shinR);
+    torso.position.y = 0.72; head.position.y = 1.08;
+    armL.position.y = 0.76; armR.position.y = 0.76;
+    hips.position.y = 0.48;
+    // simple seat cushion under figure
+    g.add(boxMesh(0.42, 0.08, 0.42, matFurn, 0, 0.42, 0.05));
+  }
+  g.userData = { kind, legL, legR, armL, armR, head, cup, phase: Math.random()*Math.PI*2, home: new THREE.Vector3() };
+  return g;
+}
+
+const kinds = ['studio','gallery','study','family','loft','pent'];
+const coffeeTargets = [];
+
+function makeRoom(name, ox, oz, w, d, kind, withPerson) {
+  const RoomGroup = new THREE.Group();
+  RoomGroup.name = 'RoomGroup_' + name;
+  RoomGroup.userData.roomName = name;
+  RoomGroup.userData.homePos = new THREE.Vector3(ox, 0, oz);
+  RoomGroup.position.set(ox, 0, oz);
+
+  const H = FLOOR_H - 0.18;
+  const FloorMesh = boxMesh(w, 0.12, d, matSlab, 0, 0.06, 0);
+  FloorMesh.name = 'FloorMesh';
+  const CeilingMesh = boxMesh(w, 0.08, d, matWall, 0, H, 0);
+  CeilingMesh.name = 'CeilingMesh';
+  CeilingMesh.userData.homeY = H;
+
+  const WallMeshes = new THREE.Group();
+  WallMeshes.name = 'WallMeshes';
+  const wh = H - 0.2;
+  // glass panes with frames
+  const panes = [
+    { w:w*0.98, h:wh, d:0.05, x:0, y:wh/2+0.1, z:d/2, nx:0, nz:1 },
+    { w:w*0.98, h:wh, d:0.05, x:0, y:wh/2+0.1, z:-d/2, nx:0, nz:-1 },
+    { w:0.05, h:wh, d:d*0.98, x:w/2, y:wh/2+0.1, z:0, nx:1, nz:0 },
+    { w:0.05, h:wh, d:d*0.6, x:-w/2, y:wh/2+0.1, z:d*0.15, nx:-1, nz:0 }
+  ];
+  panes.forEach(p => {
+    const glass = boxMesh(p.w, p.h, p.d, matGlass, p.x, p.y, p.z, false);
+    glass.userData.normal = new THREE.Vector3(p.nx, 0, p.nz);
+    glass.userData.home = new THREE.Vector3(p.x, p.y, p.z);
+    WallMeshes.add(glass);
+    // frame edges as dark posts at corners of this pane
+  });
+  // corner posts
+  [[-w/2,-d/2],[w/2,-d/2],[-w/2,d/2],[w/2,d/2]].forEach(([x,z])=>{
+    WallMeshes.add(boxMesh(0.14, H, 0.14, matFrame, x, H/2, z));
+  });
+
+  const FurnitureGroup = makeFurniture(kind);
+  FurnitureGroup.position.set(-ox, 0, -oz); // keep world-ish layout centered in building
+
+  RoomGroup.add(FloorMesh, CeilingMesh, WallMeshes, FurnitureGroup);
+  RoomGroup.userData.FloorMesh = FloorMesh;
+  RoomGroup.userData.CeilingMesh = CeilingMesh;
+  RoomGroup.userData.WallMeshes = WallMeshes;
+  RoomGroup.userData.FurnitureGroup = FurnitureGroup;
+
+  const Characters = new THREE.Group();
+  Characters.name = 'Characters';
+  if (withPerson) {
+    const p = makePerson(withPerson);
+    p.position.set(0.2 - ox*0.15, 0.12, 0.4 - oz*0.1);
+    p.userData.home.copy(p.position);
+    p.userData.floorRef = null;
+    Characters.add(p);
+    if (withPerson === 'sip') coffeeTargets.push(p);
+  }
+  RoomGroup.add(Characters);
+  RoomGroup.userData.Characters = Characters;
+  return RoomGroup;
+}
+
+function makeFloor(i) {
+  const FloorGroup = new THREE.Group();
+  FloorGroup.name = 'FloorGroup_' + i;
+  FloorGroup.userData.floorIndex = i;
+  const homeY = 0.55 + i * FLOOR_H;
+  FloorGroup.userData.homeY = homeY;
+  FloorGroup.userData.homePos = new THREE.Vector3(0, homeY, 0);
+  FloorGroup.position.y = homeY;
+  // explode: vertical slices on X
+  FloorGroup.userData.explodeOffset = new THREE.Vector3((i - (FLOORS-1)/2) * 5.4, i * 0.15, ((i%2)*2-1)*0.6);
+
+  const kind = kinds[i];
+  // Main room spanning most of floor + side module as second room
+  const main = makeRoom('Living', 0, 0, 10.5, 8.2, kind, i===2 || i===4 ? 'sip' : (i%2===0 ? 'walk' : 'stand'));
+  const moduleX = (i%2===0 ? 3.4 : -3.0);
+  const side = makeRoom('Annex', moduleX, 4.8, 3.0, 2.2, kind, i===1 ? 'walk' : null);
+  // balcony as shallow room
+  let balc = null;
+  if (i===1 || i===3 || i===4 || i===5) {
+    const bx = i%2 ? -3.4 : 3.4;
+    balc = makeRoom('Balcony', bx, -5.0, 2.3, 1.3, kind, null);
+    // railing only feel — already has walls; lighten
+  }
+  FloorGroup.add(main);
+  FloorGroup.add(side);
+  if (balc) FloorGroup.add(balc);
+
+  FloorGroup.userData.rooms = balc ? [main, side, balc] : [main, side];
+  FloorGroup.userData.CeilingMesh = main.userData.CeilingMesh; // primary for peel
+  FloorGroup.userData.peelCeilings = FloorGroup.userData.rooms.map(r => r.userData.CeilingMesh);
+
+  // store people refs
+  FloorGroup.userData.people = [];
+  FloorGroup.userData.rooms.forEach(r => {
+    r.userData.Characters.children.forEach(c => {
+      c.userData.floorIndex = i;
+      FloorGroup.userData.people.push(c);
+    });
+  });
+
+  return FloorGroup;
+}
+
+for (let i=0; i<FLOORS; i++) {
+  const fg = makeFloor(i);
+  floorGroups.push(fg);
+  BuildingGroup.add(fg);
+}
+
+// Roof as extra FloorGroup-like
+const roof = new THREE.Group();
+roof.name = 'FloorGroup_Roof';
+roof.userData.floorIndex = FLOORS;
+roof.userData.homeY = 0.55 + FLOORS*FLOOR_H;
+roof.userData.homePos = new THREE.Vector3(0, roof.userData.homeY, 0);
+roof.position.y = roof.userData.homeY;
+roof.userData.explodeOffset = new THREE.Vector3((FLOORS - (FLOORS-1)/2)*5.4, 1.2, 0.6);
+roof.userData.rooms = [];
+roof.userData.peelCeilings = [];
+roof.userData.people = [];
+roof.add(boxMesh(11.2, 0.12, 9.2, matSlab, 0, 0.06, 0));
+// railing
+for (let i=0;i<14;i++){
+  const t=i/14*Math.PI*2;
+  roof.add(cylMesh(0.025, 0.85, matFrame, Math.cos(t)*5.3, 0.5, Math.sin(t)*4.3, 6));
+}
+[[0,4.55,11,0.04],[0,-4.55,11,0.04],[5.55,0,0.04,9],[ -5.55,0,0.04,9]].forEach(([x,z,w,d])=>{
+  roof.add(boxMesh(w, 0.04, d, matFrame, x, 0.92, z));
+});
+roof.add(boxMesh(2.35, 1.95, 1.95, matWall, -3.1, 1.05, -2.3));
+roof.add(boxMesh(0.7, 1.3, 0.05, matDark, -3.1, 0.95, -1.3));
+roof.add(cylMesh(0.16, 1.55, matMid, 2.7, 1.35, -2.7, 8));
+roof.add(cylMesh(0.2, 0.12, matDark, 2.7, 2.18, -2.7, 8));
+for (let i=0;i<5;i++) roof.add(boxMesh(0.07, 0.07, 3.1, matDark, -1+i*0.7, 2.15, 2.15));
+roof.add(boxMesh(3.1, 0.07, 0.07, matDark, 0.4, 2.15, 0.65));
+roof.add(boxMesh(3.1, 0.07, 0.07, matDark, 0.4, 2.15, 3.6));
+[[-1,0.65],[2.4,0.65],[-1,3.6],[2.4,3.6]].forEach(([x,z])=> roof.add(cylMesh(0.05, 1.95, matDark, x, 1.05, z, 6)));
+[[1.5,2.5],[-0.4,3.0],[3.4,1.4],[-4.0,2.0]].forEach(([x,z])=>{
+  roof.add(boxMesh(0.42, 0.32, 0.42, matMid, x, 0.28, z));
+  const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.32, 8, 6), matPlant);
+  leaf.position.set(x, 0.7, z); addEdges(leaf); roof.add(leaf);
+});
+// roof person
+const roofPerson = makePerson('stand');
+roofPerson.position.set(-3.0, 0.12, 2.0);
+roofPerson.userData.home.copy(roofPerson.position);
+roofPerson.userData.floorIndex = FLOORS;
+roof.add(roofPerson);
+roof.userData.people.push(roofPerson);
+BuildingGroup.add(roof);
+floorGroups.push(roof);
+
+// link lines between floors for disassemble
+function rebuildLinks() {
+  while (linkLines.children.length) {
+    const c = linkLines.children.pop();
+    c.geometry?.dispose?.();
+  }
+  for (let i=0;i<FLOORS;i++){
+    const a = floorGroups[i].position.clone(); a.y += 0.2;
+    const b = floorGroups[i+1].position.clone(); b.y += 0.2;
+    const geo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(a.x, a.y + FLOOR_H*0.9, a.z),
+      new THREE.Vector3(b.x, b.y + 0.1, b.z)
+    ]);
+    linkLines.add(new THREE.Line(geo, linkMat));
+  }
+}
+
+// ---------- State / animation ----------
+let disassembled = false;
+let focusFloor = -1;
+let focusRoom = 0;
+let zoomLevel = 'whole'; // whole | floor | room | coffee
+let peopleOn = true;
+let explodeT = 0, explodeTarget = 0, explodeAnimating = false;
+let peelT = 0; // ceiling peel for floor focus
+let roomExplodeT = 0;
+let animT = 0;
+
+const camTween = {
+  active:false, t:0, dur:1.05,
+  fromPos:new THREE.Vector3(), toPos:new THREE.Vector3(),
+  fromTarget:new THREE.Vector3(), toTarget:new THREE.Vector3(),
+  fromZoom:1, toZoom:1
+};
+function ease(t){ return t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2; }
+function startCam(toPos, toTarget, toZoom){
+  camTween.active=true; camTween.t=0;
+  camTween.fromPos.copy(camera.position); camTween.toPos.copy(toPos);
+  camTween.fromTarget.copy(controls.target); camTween.toTarget.copy(toTarget);
+  camTween.fromZoom = camera.isOrthographicCamera ? camera.zoom : 1;
+  camTween.toZoom = toZoom ?? camTween.fromZoom;
+}
+
+function setPeopleVisible(on) {
+  peopleOn = on;
+  floorGroups.forEach(fg => {
+    (fg.userData.people||[]).forEach(p => { p.visible = on; });
+    (fg.userData.rooms||[]).forEach(r => { if (r.userData.Characters) r.userData.Characters.visible = on; });
+  });
+  btnPeople.classList.toggle('on', on);
+  btnPeople.setAttribute('aria-pressed', on?'true':'false');
+}
+
+function applyVisibility() {
+  const whole = focusFloor < 0 || zoomLevel === 'whole';
+  floorGroups.forEach((g, i) => {
+    if (whole) { g.visible = true; return; }
+    g.visible = (i === focusFloor) || (focusFloor === FLOORS-1 && i === FLOORS && zoomLevel==='floor');
+  });
+  stairs.visible = whole || disassembled;
+  plinth.visible = whole || disassembled;
+  if (typeof landscaping !== 'undefined') landscaping.visible = whole || disassembled;
+  // room-level: fade other rooms
+  if (!whole && focusFloor >= 0 && focusFloor < FLOORS) {
+    const fg = floorGroups[focusFloor];
+    const rooms = fg.userData.rooms || [];
+    rooms.forEach((r, ri) => {
+      if (zoomLevel === 'floor') {
+        r.visible = true;
+        setGroupOpacity(r, 1);
+      } else {
+        const sel = ri === focusRoom;
+        r.visible = true;
+        setGroupOpacity(r, sel ? 1 : (zoomLevel==='coffee' ? 0.08 : 0.18));
+        if (!sel && zoomLevel !== 'floor') {
+          // drop slightly
+          r.position.y = THREE.MathUtils.lerp(r.position.y, -0.4 * roomExplodeT, 0.5);
+        } else {
+          r.position.y = THREE.MathUtils.lerp(r.position.y, 0, 0.5);
+        }
+      }
+    });
+  }
+}
+
+function setGroupOpacity(group, op) {
+  group.traverse(o => {
+    if (o.isMesh && o.material) {
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      mats.forEach(m => {
+        if (!m.userData._baseOpacity) m.userData._baseOpacity = m.opacity ?? 1;
+        m.transparent = true;
+        m.opacity = m.userData._baseOpacity * op;
+        if (op < 0.05) o.visible = false;
+        else o.visible = true;
+      });
+    }
+    if (o.isLineSegments || o.isLine) {
+      o.visible = op > 0.2;
+    }
+  });
+}
+
+function explodePose(t) {
+  floorGroups.forEach(g => {
+    const home = g.userData.homePos;
+    const off = g.userData.explodeOffset;
+    g.position.set(home.x + off.x * t, home.y + off.y * t, home.z + off.z * t);
+  });
+  linkLines.visible = t > 0.05;
+  if (t > 0.05) rebuildLinks();
+}
+
+function peelCeilings(amount) {
+  floorGroups.forEach((fg, i) => {
+    const peels = fg.userData.peelCeilings || [];
+    const active = (focusFloor === i && zoomLevel !== 'whole');
+    peels.forEach(c => {
+      if (!c) return;
+      const hy = c.userData.homeY ?? c.position.y;
+      if (active) {
+        c.position.y = hy + amount * 2.4;
+        c.material && (c.material.transparent = true, c.material.opacity = 1 - amount * 0.85);
+        c.visible = amount < 0.95;
+      } else if (focusFloor < 0) {
+        c.position.y = hy;
+        if (c.material) c.material.opacity = c.material.userData._baseOpacity ?? 1;
+        c.visible = true;
+      }
+    });
+  });
+}
+
+function roomExplodePose(amount) {
+  if (focusFloor < 0 || focusFloor >= FLOORS) return;
+  const rooms = floorGroups[focusFloor].userData.rooms || [];
+  const room = rooms[focusRoom];
+  if (!room) return;
+  const ceil = room.userData.CeilingMesh;
+  if (ceil) {
+    const hy = ceil.userData.homeY ?? ceil.position.y;
+    ceil.position.y = hy + amount * 2.8;
+    if (ceil.material) { ceil.material.transparent = true; ceil.material.opacity = Math.max(0.05, 1 - amount); }
+  }
+  const walls = room.userData.WallMeshes;
+  if (walls) {
+    walls.children.forEach(w => {
+      if (!w.userData.home) return;
+      const n = w.userData.normal || new THREE.Vector3();
+      w.position.set(
+        w.userData.home.x + n.x * amount * 2.2,
+        w.userData.home.y,
+        w.userData.home.z + n.z * amount * 2.2
+      );
+    });
+  }
+}
+
+function updateSideCopy() {
+  const kicker = document.getElementById('sideKicker');
+  const title = document.getElementById('sideTitle');
+  const blurb = document.getElementById('sideBlurb');
+  const stats = document.getElementById('sideStats');
+  const label = document.getElementById('levelLabel');
+  const exploreLabel = document.getElementById('exploreLabel');
+  const roomExplore = document.getElementById('roomExplore');
+  const drawer = document.getElementById('drawer');
+
+  let htmlDrawer = '';
+  if (focusFloor < 0 || zoomLevel === 'whole') {
+    kicker.textContent = 'SIX WAYS OF LIVING';
+    title.textContent = 'Modular Habitat';
+    blurb.textContent = 'Six stacked apartments — studios to two-beds — with kitchens, studies, galleries and terrace access. Explore each level, then step inside.';
+    stats.textContent = '6 apartments · 32 spaces';
+    label.textContent = '01 — THE WHOLE HABITAT';
+    exploreLabel.textContent = 'EXPLORE FLOORS';
+    roomExplore.style.display = 'none';
+  } else {
+    const meta = FLOOR_META[Math.min(focusFloor, FLOOR_META.length-1)];
+    kicker.textContent = 'LEVEL ' + meta.code;
+    title.textContent = meta.title;
+    const rooms = floorGroups[focusFloor]?.userData.rooms || [];
+    if (zoomLevel === 'floor') {
+      blurb.textContent = meta.blurb;
+      stats.textContent = `${meta.rooms.length} rooms · ${meta.spaces} spaces`;
+      label.textContent = `${meta.code} — ${meta.title.toUpperCase()}`;
+      exploreLabel.textContent = 'EXPLORE FLOORS';
+      roomExplore.style.display = 'flex';
+    } else {
+      const rn = meta.rooms[focusRoom] || rooms[focusRoom]?.userData.roomName || 'Room';
+      blurb.textContent = zoomLevel === 'coffee'
+        ? 'Close-up: a resident pauses with a cup — the smallest unit of living in the habitat.'
+        : `Inside the ${rn}: walls peel outward so furniture and daily rituals stay readable.`;
+      stats.textContent = `${rn} · floor ${meta.code}`;
+      label.textContent = `${meta.code}.${focusRoom+1} — ${String(rn).toUpperCase()}`;
+      exploreLabel.textContent = 'EXPLORE FLOORS';
+      roomExplore.style.display = 'flex';
+    }
+  }
+  const showRooms = focusFloor >= 0 && zoomLevel !== 'whole';
+  htmlDrawer = `<div class="kicker">${kicker.textContent}</div>
+    <h2 style="font-size:18px;margin:6px 0 8px">${title.textContent}</h2>
+    <p style="font-size:12px;line-height:1.5;color:#444">${blurb.textContent}</p>
+    <div style="font-size:11px;color:#666;margin:10px 0">${stats.textContent}</div>
+    <div class="explore"><div class="arrows">
+      <button type="button" id="dFloorUp">▲</button><button type="button" id="dFloorDown">▼</button>
+    </div><span>EXPLORE FLOORS</span></div>` + (showRooms ? `
+    <div class="explore"><div class="arrows">
+      <button type="button" id="dRoomUp">▲</button><button type="button" id="dRoomDown">▼</button>
+    </div><span>EXPLORE ROOMS</span></div>` : '');
+  drawer.innerHTML = htmlDrawer;
+  drawer.querySelector('#dFloorUp')?.addEventListener('click', () => stepFloor(1));
+  drawer.querySelector('#dFloorDown')?.addEventListener('click', () => stepFloor(-1));
+  drawer.querySelector('#dRoomUp')?.addEventListener('click', () => stepRoom(1));
+  drawer.querySelector('#dRoomDown')?.addEventListener('click', () => stepRoom(-1));
+  btnBack.disabled = zoomLevel === 'whole' && focusFloor < 0;
+  document.body.classList.toggle('compact-chrome', zoomLevel !== 'whole' || disassembled);
+}
+
+function focusOnFloor(idx) {
+  focusFloor = idx;
+  focusRoom = 0;
+  zoomLevel = idx < 0 ? 'whole' : 'floor';
+  peelT = idx < 0 ? 0 : 1;
+  roomExplodeT = 0;
+  applyVisibility();
+  updateSideCopy();
+  const y = idx < 0 ? 8 : (0.55 + idx*FLOOR_H + FLOOR_H*0.45);
+  if (idx < 0) startCam(new THREE.Vector3(30,26,30), new THREE.Vector3(0,8,0), 1);
+  else startCam(new THREE.Vector3(16, y+9, 16), new THREE.Vector3(0, y, 0), 1.55);
+}
+
+function zoomInto(level) {
+  if (level === 'whole') { focusOnFloor(-1); return; }
+  if (focusFloor < 0) focusFloor = 2;
+  zoomLevel = level;
+  applyVisibility();
+  updateSideCopy();
+  const fy = 0.55 + focusFloor*FLOOR_H;
+  const rooms = floorGroups[focusFloor]?.userData.rooms || [];
+  const room = rooms[focusRoom];
+  const rc = room ? room.getWorldPosition(new THREE.Vector3()) : new THREE.Vector3(0, fy, 0);
+  if (level === 'floor') {
+    peelT = 1; roomExplodeT = 0;
+    startCam(new THREE.Vector3(15, fy+9, 15), new THREE.Vector3(0, fy+1.2, 0), 1.55);
+  } else if (level === 'room') {
+    peelT = 1; roomExplodeT = 1;
+    startCam(new THREE.Vector3(rc.x+7, fy+4.2, rc.z+7), new THREE.Vector3(rc.x, fy+1.1, rc.z), 2.15);
+  } else if (level === 'coffee') {
+    peelT = 1; roomExplodeT = 1;
+    let sip = coffeeTargets.find(p => p.userData.floorIndex === focusFloor) || coffeeTargets[0];
+    const wp = new THREE.Vector3();
+    sip.getWorldPosition(wp);
+    startCam(new THREE.Vector3(wp.x+2.0, wp.y+1.55, wp.z+2.0), new THREE.Vector3(wp.x, wp.y+1.1, wp.z), 3.6);
+  }
+  updateSideCopy();
+}
+
+function stepFloor(dir) {
+  let next = focusFloor + dir;
+  if (focusFloor < 0) next = dir > 0 ? 0 : FLOORS-1;
+  if (next < 0 || next >= FLOORS) { focusOnFloor(-1); return; }
+  focusOnFloor(next);
+}
+function stepRoom(dir) {
+  if (focusFloor < 0 || focusFloor >= FLOORS) return;
+  const rooms = floorGroups[focusFloor].userData.rooms || [];
+  if (!rooms.length) return;
+  focusRoom = (focusRoom + dir + rooms.length) % rooms.length;
+  if (zoomLevel === 'whole' || zoomLevel === 'floor') zoomInto('room');
+  else zoomInto(zoomLevel);
+}
+
+// UI refs
+const btnPeople = document.getElementById('btnPeople');
+const btnDisassemble = document.getElementById('btnDisassemble');
+const btnBack = document.getElementById('btnBack');
+const btnIso = document.getElementById('btnIso');
+const btnStop = document.getElementById('btnStop');
+document.getElementById('floorUp').onclick = () => stepFloor(1);
+document.getElementById('floorDown').onclick = () => stepFloor(-1);
+document.getElementById('roomUp').onclick = () => stepRoom(1);
+document.getElementById('roomDown').onclick = () => stepRoom(-1);
+btnPeople.onclick = () => setPeopleVisible(!peopleOn);
+btnDisassemble.onclick = () => {
+  explodeTarget = disassembled ? 0 : 1;
+  explodeAnimating = true;
+  disassembled = !disassembled;
+  btnDisassemble.textContent = disassembled ? '◢ Reassemble' : '◢ Disassemble';
+  btnDisassemble.classList.toggle('on', disassembled);
+  if (disassembled) { focusFloor = -1; zoomLevel = 'whole'; peelT = 0; roomExplodeT = 0; applyVisibility(); updateSideCopy(); }
+};
+btnBack.onclick = () => {
+  if (zoomLevel === 'coffee') zoomInto('room');
+  else if (zoomLevel === 'room') zoomInto('floor');
+  else if (zoomLevel === 'floor') zoomInto('whole');
+};
+btnIso.onclick = () => {
+  useIso = !useIso;
+  const pos = camera.position.clone(), tgt = controls.target.clone();
+  camera = useIso ? makeOrtho() : makePersp();
+  camera.position.copy(pos);
+  controls.object = camera; controls.target.copy(tgt);
+  if (useIso) {
+    controls.minPolarAngle = Math.PI/2 - 0.62;
+    controls.maxPolarAngle = Math.PI/2 - 0.48;
+  } else {
+    controls.minPolarAngle = 0.2;
+    controls.maxPolarAngle = Math.PI/2 - 0.05;
+  }
+  controls.update(); resize();
+  btnIso.classList.toggle('on', useIso);
+  btnIso.setAttribute('aria-pressed', useIso?'true':'false');
+  btnIso.textContent = useIso ? '● Isometric' : '○ Perspective';
+};
+btnStop.onclick = () => {
+  try {
+    const a = document.createElement('a');
+    a.download = 'modular-habitat.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  } catch(e){ console.warn(e); }
+};
+document.getElementById('infoBtn').onclick = () => {
+  updateSideCopy();
+  document.getElementById('drawer').classList.toggle('open');
+};
+canvas.addEventListener('dblclick', () => {
+  if (zoomLevel === 'whole') { if (focusFloor<0) focusFloor=2; zoomInto('floor'); }
+  else if (zoomLevel === 'floor') zoomInto('room');
+  else if (zoomLevel === 'room') zoomInto('coffee');
+});
+
+const recEl = document.getElementById('rec');
+const t0 = performance.now();
+
+function resize(){
+  const w=canvas.clientWidth, h=canvas.clientHeight;
+  renderer.setSize(w,h,false);
+  if (camera.isOrthographicCamera){
+    const fr=18, a=w/Math.max(1,h);
+    camera.left=-fr*a; camera.right=fr*a; camera.top=fr; camera.bottom=-fr;
+    camera.updateProjectionMatrix();
+  } else {
+    camera.aspect=w/Math.max(1,h); camera.updateProjectionMatrix();
+  }
+}
+addEventListener('resize', resize); resize();
+
+function animatePeople(dt){
+  animT += dt;
+  floorGroups.forEach(fg => {
+    (fg.userData.people||[]).forEach(p => {
+      const ud = p.userData;
+      const ph = ud.phase + animT;
+      if (ud.kind === 'walk') {
+        ud.legL.rotation.x = Math.sin(ph*4.2)*0.55;
+        ud.legR.rotation.x = Math.sin(ph*4.2+Math.PI)*0.55;
+        ud.armL.rotation.x = Math.sin(ph*4.2+Math.PI)*0.45;
+        ud.armR.rotation.x = Math.sin(ph*4.2)*0.45;
+        p.position.x = ud.home.x + Math.sin(ph*0.85)*1.1;
+        p.position.z = ud.home.z + Math.cos(ph*0.65)*0.7;
+        p.rotation.y = Math.atan2(Math.cos(ph*0.7)*0.55, -Math.sin(ph*0.55)*0.4);
+      } else if (ud.kind === 'sip') {
+        const sip = (Math.sin(ph*1.6)+1)*0.5;
+        ud.armR.rotation.x = -0.25 - sip*1.15;
+        ud.armR.rotation.z = -0.2 - sip*0.3;
+        if (ud.cup) {
+          ud.cup.position.set(0.2+sip*0.02, 0.95+sip*0.28, 0.08+sip*0.1);
+          ud.cup.rotation.x = -sip*0.55;
+        }
+        ud.head.rotation.x = sip*0.18;
+      } else {
+        ud.armL.rotation.z = 0.12+Math.sin(ph*1.4)*0.12;
+        ud.armR.rotation.z = -0.12-Math.sin(ph*1.4+1)*0.12;
+        ud.head.rotation.y = Math.sin(ph*0.7)*0.2;
+      }
+    });
+  });
+}
+
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(0.05, (now-last)/1000); last = now;
+  if (explodeAnimating) {
+    const dir = Math.sign(explodeTarget - explodeT) || 0;
+    explodeT += dir * dt * 1.35;
+    if ((dir>0 && explodeT>=explodeTarget) || (dir<0 && explodeT<=explodeTarget) || dir===0){
+      explodeT=explodeTarget; explodeAnimating=false;
+    }
+    explodePose(ease(Math.min(1, Math.max(0, explodeT))));
+  }
+  // smooth peel / room explode toward targets
+  const peelTarget = (focusFloor>=0 && zoomLevel!=='whole') ? 1 : 0;
+  peelT += (peelTarget - peelT) * Math.min(1, dt*2.5);
+  peelCeilings(ease(peelT));
+  const reTarget = (zoomLevel==='room' || zoomLevel==='coffee') ? 1 : 0;
+  roomExplodeT += (reTarget - roomExplodeT) * Math.min(1, dt*2.8);
+  roomExplodePose(ease(roomExplodeT));
+  applyVisibility();
+
+  if (camTween.active){
+    camTween.t += dt/camTween.dur;
+    const u = ease(Math.min(1, camTween.t));
+    camera.position.lerpVectors(camTween.fromPos, camTween.toPos, u);
+    controls.target.lerpVectors(camTween.fromTarget, camTween.toTarget, u);
+    if (camera.isOrthographicCamera){
+      camera.zoom = THREE.MathUtils.lerp(camTween.fromZoom, camTween.toZoom, u);
+      camera.updateProjectionMatrix();
+    }
+    if (camTween.t>=1) camTween.active=false;
+  }
+  animatePeople(dt);
+  const s = Math.floor((now-t0)/1000);
+  recEl.textContent = `Session ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+updateSideCopy();
+
+window.HABITAT = {
+  state() {
+    return {
+      floors: FLOORS,
+      disassembled,
+      explodeT,
+      focusFloor,
+      focusRoom,
+      zoomLevel,
+      peopleOn,
+      peopleCount: floorGroups.reduce((n,f)=>n+(f.userData.people||[]).length,0),
+      sipCount: coffeeTargets.length,
+      isometric: useIso,
+      hasCoffeeTarget: coffeeTargets.length>0,
+      hierarchy: 'BuildingGroup/FloorGroup/RoomGroup'
+    };
+  },
+  disassemble(opts){
+    if (disassembled) return;
+    disassembled = true;
+    explodeTarget = 1;
+    btnDisassemble.textContent = '◢ Reassemble';
+    btnDisassemble.classList.add('on');
+    focusFloor = -1; zoomLevel = 'whole'; peelT = 0; roomExplodeT = 0;
+    applyVisibility(); updateSideCopy();
+    if (opts && opts.immediate) { explodeT = 1; explodeAnimating = false; explodePose(1); }
+    else explodeAnimating = true;
+  },
+  reassemble(opts){
+    if (!disassembled) return;
+    disassembled = false;
+    explodeTarget = 0;
+    btnDisassemble.textContent = '◢ Disassemble';
+    btnDisassemble.classList.remove('on');
+    if (opts && opts.immediate) { explodeT = 0; explodeAnimating = false; explodePose(0); }
+    else explodeAnimating = true;
+  },
+  setFloor(n){ focusOnFloor(n); },
+  setRoom(n){ focusRoom=n; if(zoomLevel==='whole') zoomInto('room'); else zoomInto(zoomLevel==='floor'?'room':zoomLevel); },
+  setPeople(on){ setPeopleVisible(!!on); },
+  zoomTo(level){ zoomInto(level); },
+  setIsometric(on){ if(useIso!==!!on) btnIso.click(); },
+  download(){ btnStop.click(); }
+};
+console.info('Modular Habitat ready');
+</script>
+</body>
+</html>
