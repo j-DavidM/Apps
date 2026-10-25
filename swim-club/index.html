@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no"/>
 <title>Deep End — Lido Club</title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 :root{
-  --bg:#e8e6e1; --panel:#ffffffee; --ink:#1a1a1a; --muted:#6b6b6b;
-  --line:#d8d5ce; --accent:#0ea5e9; --ok:#16a34a; --chip:#f3f1ec;
+  --bg:#EFEEE9; --panel:#ffffffee; --ink:#1a1a1a; --muted:#6b6b6b;
+  --line:#C9C5BC; --accent:#0ea5e9; --ok:#16a34a; --chip:#f3f1ec;
   --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
   --safe-l:env(safe-area-inset-left,0px); --safe-r:env(safe-area-inset-right,0px);
 }
@@ -19,26 +20,37 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .hud{position:fixed;z-index:10;pointer-events:none;inset:0;
   padding:calc(12px + var(--safe-t)) calc(12px + var(--safe-r)) calc(12px + var(--safe-b)) calc(12px + var(--safe-l))}
 .hud *{pointer-events:auto}
-.brand{position:absolute;top:calc(10px + var(--safe-t));left:calc(14px + var(--safe-l));max-width:min(280px,42vw)}
-.brand h1{font-size:clamp(22px,5vw,34px);font-weight:800;letter-spacing:-.03em;line-height:1}
-.brand p{margin-top:6px;font-size:12px;line-height:1.35;color:var(--muted);max-width:240px}
+.brand{position:absolute;top:calc(10px + var(--safe-t));left:calc(14px + var(--safe-l));max-width:min(300px,46vw)}
+.brand .eyebrow{font-size:9px;letter-spacing:0.16em;color:#6b6b6b;text-transform:uppercase;margin-bottom:6px;font-weight:600}
+.brand h1{font-family:"Press Start 2P",ui-monospace,monospace;font-size:clamp(22px,3.2vw,38px);font-weight:400;
+  letter-spacing:0.02em;line-height:1.15;color:#1a1a1a;
+  text-shadow:1px 0 #1a1a1a,-1px 0 #1a1a1a,0 1px #1a1a1a,0 -1px #1a1a1a,1px 1px #1a1a1a,-1px -1px #1a1a1a}
+.brand p{margin-top:8px;font-size:12px;line-height:1.35;color:var(--muted);max-width:250px}
 .board{position:absolute;top:calc(12px + var(--safe-t));left:50%;transform:translateX(-50%);
-  background:#0b3d91;color:#fff;border-radius:8px;padding:8px 14px;min-width:160px;text-align:center;
+  background:#0b3d91;color:#fff;border-radius:8px;padding:8px 14px;min-width:180px;text-align:center;
   box-shadow:0 8px 24px #0002;font-variant-numeric:tabular-nums}
-.board .lab{font-size:9px;letter-spacing:.12em;opacity:.85;text-transform:uppercase}
+.board .lab{font-size:10px;letter-spacing:.12em;opacity:.85;text-transform:uppercase}
+.board .diver{font-size:13px;font-weight:800;letter-spacing:.04em;margin-top:3px}
 .board .row{display:flex;justify-content:space-between;gap:18px;margin-top:4px;font-weight:700;font-size:15px}
 .board .sub{font-size:10px;opacity:.8;margin-top:2px}
+.board .pips{display:flex;justify-content:center;gap:4px;margin-top:5px}
+.board .pips i{display:block;width:10px;height:10px;border:1.5px solid #fff9;border-radius:2px;opacity:.7}
 .panel{position:absolute;top:calc(10px + var(--safe-t));right:calc(10px + var(--safe-r));
   width:min(220px,calc(100vw - 24px));max-height:calc(100vh - 24px - var(--safe-t) - var(--safe-b));
-  overflow:auto;background:var(--panel);backdrop-filter:blur(10px);border:1px solid var(--line);
-  border-radius:14px;padding:10px 10px 12px;box-shadow:0 10px 30px #0001}
-.panel h2{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:8px 0 6px}
-.panel h2:first-child{margin-top:0}
+  overflow:auto;background:transparent;border:0;border-radius:0;padding:0;
+  box-shadow:none;display:flex;flex-direction:column;gap:8px}
+.card{background:var(--panel);backdrop-filter:blur(10px);border:1px solid var(--line);
+  border-radius:10px;padding:10px 10px 12px;box-shadow:0 6px 18px #0001}
+.card h2{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:8px 0 6px}
+.card h2:first-child{margin-top:0}
 .seg{display:flex;flex-wrap:wrap;gap:4px}
 .seg button,.tog{appearance:none;border:1px solid var(--line);background:var(--chip);color:var(--ink);
   border-radius:8px;padding:6px 9px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.1}
 .seg button.on,.tog.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .seg button:active,.tog:active{transform:scale(.97)}
+.checks{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:6px;font-size:11px;color:var(--muted)}
+.checks label{display:inline-flex;align-items:center;gap:4px;cursor:pointer;user-select:none}
+.checks input{accent-color:var(--ink);width:14px;height:14px}
 .row2{display:flex;align-items:center;gap:8px;margin:6px 0}
 .row2 label{font-size:11px;color:var(--muted);min-width:64px}
 .row2 input[type=range]{flex:1;accent-color:var(--ink)}
@@ -47,98 +59,136 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .log{font-size:11px;color:var(--muted);background:var(--chip);border-radius:8px;padding:7px 8px;
   min-height:38px;line-height:1.35;margin-top:2px}
 .hint{position:absolute;bottom:calc(10px + var(--safe-b));left:calc(14px + var(--safe-l));
-  font-size:11px;color:var(--muted);max-width:min(360px,70vw);line-height:1.35}
+  font-size:11px;color:var(--muted);max-width:min(400px,72vw);line-height:1.35;
+  letter-spacing:.02em}
 .foot{position:absolute;bottom:calc(8px + var(--safe-b));right:calc(12px + var(--safe-r));
-  font-size:9px;color:#999;max-width:160px;text-align:right;line-height:1.3}
+  font-size:10px;color:#8A8680;max-width:180px;text-align:right;line-height:1.3}
+.how-pill{appearance:none;border:1px solid var(--line);background:#fff;color:var(--ink);
+  border-radius:999px;padding:6px 12px;font-size:10px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;cursor:pointer;box-shadow:0 2px 8px #0001}
+.how-pill:active{transform:scale(.97)}
 .panel-toggle{display:none;appearance:none;width:100%;border:0;background:transparent;color:var(--ink);
   font:inherit;font-size:12px;font-weight:700;letter-spacing:.04em;text-align:left;cursor:pointer;
   padding:2px 0 4px;align-items:center;justify-content:space-between;gap:8px}
 .panel-toggle .chev{opacity:.55;font-size:11px}
-.panel-body{display:block}
+.panel-body{display:flex;flex-direction:column;gap:8px}
+.panel-chrome{display:none}
 @media (max-width:640px){
   .brand p{display:none}
-  .brand h1{font-size:20px}
-  .panel{width:min(156px,40vw);padding:8px;border-radius:12px;max-height:calc(100vh - 100px - var(--safe-t));font-size:11px}
-  .panel-toggle{display:flex}
-  .panel.collapsed{width:auto;min-width:0;max-height:none;padding:8px 10px}
+  .brand h1{font-size:23px}
+  .brand .eyebrow{font-size:8px;letter-spacing:0.14em}
+  .panel{width:min(280px,calc(100vw - 20px));gap:6px;max-height:calc(100vh - 100px - var(--safe-t))}
+  .panel-toggle{display:flex;min-height:44px;padding:10px 4px;align-items:center}
+  .panel-chrome{display:block;padding:2px 10px}
+  .panel.collapsed{width:auto;min-width:0;max-height:none}
   .panel.collapsed .panel-body{display:none}
-  .panel h2{margin:5px 0 3px;font-size:9px}
+  .panel.collapsed > .card{padding:6px 10px}
+  .card{padding:8px;border-radius:10px}
+  .card h2{margin:5px 0 3px;font-size:10px}
   .panel .list{display:none}
-  /* one-line commentary — keep heading + log, no empty header */
-  .panel .log{display:block;min-height:0;max-height:1.35em;padding:4px 6px;font-size:10px;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .seg button,.tog{padding:5px 6px;font-size:10px}
-  .board{padding:5px 8px;min-width:110px;top:auto;bottom:calc(52px + var(--safe-b));left:calc(10px + var(--safe-l));transform:none}
+  .panel .log{display:block;min-height:0;max-height:2.7em;padding:6px 8px;font-size:11px;
+    white-space:normal;overflow:hidden;line-height:1.35}
+  .seg button,.tog{min-height:44px;min-width:44px;padding:10px 8px;font-size:12px}
+  .board{padding:6px 10px;min-width:120px;top:auto;bottom:calc(52px + var(--safe-b));left:calc(10px + var(--safe-l));transform:none}
   .board .row{font-size:12px;gap:10px}
-  .board .lab,.board .sub{font-size:8px}
+  .board .lab,.board .sub{font-size:10px}
+  .board .diver{font-size:11px}
   .hint{font-size:10px;max-width:48vw}
   .row2 label{min-width:42px;font-size:10px}
   .row2{margin:4px 0}
+  .checks{font-size:12px;gap:8px}
+  .checks input{width:16px;height:16px}
 }
 </style>
+
 </head>
 <body>
 <canvas id="c"></canvas>
 <div class="hud">
   <div class="brand">
+    <div class="eyebrow">PIXEL DIORAMA · DIVING</div>
     <h1>DEEP END</h1>
     <p>Open-air lido on a floating island. Dive, lap, lounge — pixel-ish 3D club diorama.</p>
   </div>
   <div class="board" id="scoreboard">
-    <div class="lab">Diving meet · 10m</div>
+    <div class="lab">10 m platform</div>
+    <div class="diver" id="scDiver">MIRA · 207C</div>
     <div class="row"><span>HOME <b id="scH">12.4</b></span><span>GUEST <b id="scG">11.8</b></span></div>
-    <div class="sub" id="scSub">Round 1 · Mira on board</div>
+    <div class="sub" id="scSub">Round 1 / 5 · Mira on board</div>
+    <div class="pips" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
   </div>
   <aside class="panel collapsed" id="panel">
-    <button type="button" class="panel-toggle" id="panelToggle" aria-expanded="false">Controls <span class="chev">▾</span></button>
+    <div class="card panel-chrome">
+      <button type="button" class="panel-toggle" id="panelToggle" aria-expanded="false">Controls <span class="chev">▾</span></button>
+    </div>
     <div class="panel-body" id="panelBody">
-    <h2>Event</h2>
-    <div class="seg" id="evSeg">
-      <button data-ev="10m" class="on">10m</button>
-      <button data-ev="3m">3m</button>
-      <button data-ev="free">Free</button>
-    </div>
-    <div class="list" id="lb">
-      <div><b>1 Mira</b> 72.40</div>
-      <div>2 Tea 69.15</div>
-      <div>3 Sanna 67.80</div>
-      <div>4 Koji 65.20</div>
-      <div>5 Nell 63.55</div>
-      <div>6 Arna 61.10</div>
-    </div>
-    <h2>Time</h2>
-    <div class="seg" id="timeSeg">
-      <button data-t="day" class="on">Day</button>
-      <button data-t="dusk">Dusk</button>
-      <button data-t="night">Night</button>
-    </div>
-    <div class="row2"><label>Blend</label><input id="tod" type="range" min="0" max="100" value="12"/></div>
-    <h2>Weather</h2>
-    <div class="seg" id="wxSeg">
-      <button data-w="dry" class="on">Clear</button>
-      <button data-w="rain">Rain</button>
-      <button data-w="snow">Snow</button>
-    </div>
-    <h2>Play</h2>
-    <div class="seg">
-      <button id="btnPause">Pause</button>
-      <button id="btnSpeed" data-sp="1">Speed 1×</button>
-      <button id="btnOrbit" class="on">Orbit</button>
-    </div>
-    <h2>Commentary</h2>
-    <div class="log" id="log">Whistle: “No running on the deck!”</div>
-    <h2>View</h2>
-    <div class="seg">
-      <button id="btnPixel" class="on">Pixel</button>
-      <button id="btnRaw">Raw 3D</button>
-      <button id="btnOutline">Outlines</button>
-    </div>
-    <div class="row2"><label>Pixel</label><input id="pxSize" type="range" min="1" max="6" value="2"/></div>
+      <div class="card">
+        <h2>Event</h2>
+        <div class="seg" id="evSeg">
+          <button data-ev="10m" class="on">10m</button>
+          <button data-ev="3m">3m</button>
+          <button data-ev="free">Free</button>
+        </div>
+        <div class="list" id="lb">
+          <div><b>1 Mira</b> 72.40</div>
+          <div>2 Tea 69.15</div>
+          <div>3 Sanna 67.80</div>
+          <div>4 Koji 65.20</div>
+          <div>5 Nell 63.55</div>
+          <div>6 Arna 61.10</div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Time</h2>
+        <div class="seg" id="timeSeg">
+          <button data-t="day" class="on">Day</button>
+          <button data-t="dusk">Dusk</button>
+          <button data-t="night">Night</button>
+        </div>
+        <div class="row2"><label>Blend</label><input id="tod" type="range" min="0" max="100" value="12"/></div>
+        <h2>Weather</h2>
+        <div class="seg" id="wxSeg">
+          <button data-w="dry" class="on">Dry</button>
+          <button data-w="rain">Rain</button>
+          <button data-w="snow">Snow</button>
+        </div>
+        <div class="checks"><label><input type="checkbox" id="chkPuddles"/> Deck puddles</label></div>
+      </div>
+      <div class="card">
+        <h2>Play</h2>
+        <div class="seg">
+          <button id="btnPause">Pause</button>
+          <button id="btnSpeed" data-sp="1">Speed 1×</button>
+          <button id="btnOrbit" class="on">Orbit</button>
+        </div>
+        <div class="seg" style="margin-top:4px">
+          <button id="btnTurnL" type="button" title="Turn left">Turn ◀</button>
+          <button id="btnTurnR" type="button" title="Turn right">Turn ▶</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Commentary</h2>
+        <div class="log" id="log">Whistle: “No running on the deck!”</div>
+      </div>
+      <div class="card">
+        <h2>View</h2>
+        <div class="seg">
+          <button id="btnPixel" class="on">Pixel</button>
+          <button id="btnRaw">Raw 3D</button>
+        </div>
+        <div class="row2"><label>Pixel</label><input id="pxSize" type="range" min="1" max="6" value="3"/></div>
+        <div class="checks">
+          <label><input type="checkbox" id="chkPalette"/> Palette</label>
+          <label><input type="checkbox" id="chkDither"/> Dither</label>
+          <label><input type="checkbox" id="chkOutline" checked/> Outlines</label>
+        </div>
+      </div>
     </div>
   </aside>
-  <div class="hint">Tap water to splash · Drag to orbit · Pinch / scroll to zoom</div>
-  <div class="foot">Inspired by a public X demo · original build</div>
+  <div class="hint">[TAP] water · [DRAG] orbit · [SCROLL] zoom</div>
+  <div class="foot"><button type="button" class="how-pill" id="btnHow" title="About the look">How it’s drawn</button></div>
 </div>
+
 <script type="importmap">
 {"imports":{
   "three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
@@ -157,7 +207,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xe8e6e1);
+scene.background = new THREE.Color(0xefeee9);
 
 // Orthographic isometric camera
 const aspect = innerWidth / innerHeight;
@@ -238,35 +288,45 @@ const club = new THREE.Group();
 scene.add(club);
 
 // Floating island with cross-section strata
+function tagNight(mesh, hex) {
+  mesh.userData.nightDark = true;
+  mesh.userData.baseColor = hex;
+  return mesh;
+}
 function makeIsland() {
   const g = new THREE.Group();
-  // top deck soil lip
-  const deck = box(22, 0.35, 16, 0x9aa3a8);
+  // light concrete deck
+  const deck = tagNight(box(22, 0.35, 16, 0xd4d7da), 0xd4d7da);
   add(g, deck, 0, 0, 0);
-  // grass/perimeter rings (slightly raised tiles)
-  const rim = box(22.4, 0.18, 16.4, 0x7d8a70);
-  add(g, rim, 0, -0.05, 0);
+  // soft perimeter — stepped rings for rounder cookie silhouette
+  const rim = tagNight(box(22.6, 0.16, 16.6, 0x8a9478), 0x8a9478);
+  add(g, rim, 0, -0.04, 0);
+  // corner bites / organic cutaways
+  [[10.6,0,7.4],[10.8,0,-7.2],[-10.7,0,7.1],[-10.5,0,-7.3],[0,0,8.1],[0,0,-8.0]].forEach(([x,y,z],i) => {
+    const bite = tagNight(box(1.4 + (i%3)*0.4, 0.5, 1.3 + (i%2)*0.5, 0xb8bdc2), 0xb8bdc2);
+    add(g, bite, x*0.92, 0.05, z*0.92);
+  });
 
-  // strata — brown soil, grey bedrock, darker base
-  const soil = box(21.6, 1.1, 15.6, 0x8b5a3c);
+  // multi-band strata
+  const soil = tagNight(box(21.6, 1.05, 15.6, 0x8b5a3c), 0x8b5a3c);
   add(g, soil, 0, -0.7, 0);
-  const dirt2 = box(20.8, 1.0, 14.8, 0x6b4423);
-  add(g, dirt2, 0, -1.7, 0);
-  const rock = box(19.6, 1.4, 13.8, 0x6e7378);
-  add(g, rock, 0, -2.85, 0);
-  const bedrock = box(18.2, 1.6, 12.6, 0x4a4f55);
-  add(g, bedrock, 0, -4.3, 0);
-  // irregular underside nibs
-  for (let i = 0; i < 10; i++) {
-    const n = box(1.2 + Math.random() * 2, 0.6 + Math.random() * 1.2, 1 + Math.random() * 1.5, 0x3d4248);
-    add(g, n, (Math.random() - 0.5) * 14, -5.2 - Math.random() * 0.8, (Math.random() - 0.5) * 10);
+  const dirt2 = tagNight(box(20.6, 0.95, 14.6, 0x6b4423), 0x6b4423);
+  add(g, dirt2, 0, -1.65, 0);
+  const rock = tagNight(box(19.2, 1.35, 13.5, 0x6e7378), 0x6e7378);
+  add(g, rock, 0, -2.8, 0);
+  const bedrock = tagNight(box(17.6, 1.55, 12.2, 0x4a4f55), 0x4a4f55);
+  add(g, bedrock, 0, -4.25, 0);
+  // irregular underside nibs — rounder floating cookie
+  for (let i = 0; i < 14; i++) {
+    const ang = (i / 14) * Math.PI * 2;
+    const rr = 6 + Math.random() * 5;
+    const n = tagNight(box(1.0 + Math.random() * 1.8, 0.5 + Math.random() * 1.1, 0.9 + Math.random() * 1.4, 0x3d4248), 0x3d4248);
+    add(g, n, Math.cos(ang) * rr * 0.85, -5.1 - Math.random() * 0.9, Math.sin(ang) * rr * 0.7);
   }
 
-  // water cutaway visible on +X edge of pool (blue layer in rock)
   const cut = box(0.35, 0.9, 5.2, 0x3aa7d9, { transparent: true, opacity: 0.85 });
   add(g, cut, 6.05, -0.55, 0.4);
 
-  // waterfall on +X edge
   const fall = new THREE.Group();
   const sheet = box(0.35, 3.8, 1.4, 0x7ec8e8, { transparent: true, opacity: 0.7 });
   add(fall, sheet, 0, -1.6, 0);
@@ -281,14 +341,15 @@ function makeIsland() {
 club.add(makeIsland());
 
 // ---------- pools ----------
-const waterMat = mat(0x3eb6e0, { transparent: true, opacity: 0.82 });
-const deepMat = mat(0x1d7fb5, { transparent: true, opacity: 0.88 });
+const waterMat = mat(0x3eb6e0, { transparent: true, opacity: 0.82, emissive: 0x0a3a44, emissiveIntensity: 0.15 });
+const deepMat = mat(0x1d7fb5, { transparent: true, opacity: 0.88, emissive: 0x0a4a55, emissiveIntensity: 0.2 });
+waterMat.userData.isWater = true; deepMat.userData.isWater = true;
 const poolGroup = new THREE.Group();
 club.add(poolGroup);
 
 // Lap pool: 5 lanes, ~10 x 6
 const lapW = 10, lapD = 6.2, lapX = -1.5, lapZ = 0.3;
-const lapBasin = box(lapW + 0.5, 0.55, lapD + 0.5, 0xcfd6db);
+const lapBasin = tagNight(box(lapW + 0.5, 0.55, lapD + 0.5, 0xd4d7da), 0xd4d7da);
 add(poolGroup, lapBasin, lapX, -0.05, lapZ);
 const lapWater = new THREE.Mesh(new THREE.BoxGeometry(lapW, 0.35, lapD), waterMat);
 lapWater.position.set(lapX, 0.05, lapZ);
@@ -340,7 +401,7 @@ add(poolGroup, noDiv2, lapX - 3.2, 0.25, lapZ + lapD / 2 + 0.55);
 
 // Diving pool (deeper, separate)
 const divX = 5.2, divZ = -1.8;
-const divBasin = box(5.2, 0.7, 5.2, 0xcfd6db);
+const divBasin = tagNight(box(5.2, 0.7, 5.2, 0xd4d7da), 0xd4d7da);
 add(poolGroup, divBasin, divX, -0.1, divZ);
 const divWater = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.4, 4.6), deepMat);
 divWater.position.set(divX, 0.02, divZ);
@@ -460,7 +521,8 @@ club.add(trees);
 function cypress(x, z, h = 3.8) {
   const g = new THREE.Group();
   add(g, cyl(0.12, 0.16, 0.6, 0x5b3a29, 6), 0, 0.3, 0);
-  add(g, cyl(0.35, 0.55, h, 0x14532d, 7), 0, 0.6 + h / 2, 0);
+  const fol = tagNight(cyl(0.35, 0.55, h, 0x14532d, 7), 0x14532d);
+  add(g, fol, 0, 0.6 + h / 2, 0);
   g.position.set(x, 0, z);
   trees.add(g);
 }
@@ -469,6 +531,7 @@ function roundTree(x, z, s = 1) {
   add(g, cyl(0.1, 0.14, 0.7 * s, 0x5b3a29, 6), 0, 0.35 * s, 0);
   const foliage = new THREE.Mesh(new THREE.IcosahedronGeometry(0.7 * s, 0), mat(0x22c55e));
   foliage.castShadow = true; foliage.receiveShadow = true;
+  tagNight(foliage, 0x22c55e);
   add(g, foliage, 0, 1.2 * s, 0);
   g.position.set(x, 0, z);
   trees.add(g);
@@ -687,8 +750,10 @@ for (let i = 0; i < 40; i++) {
 
 // ---------- pixel post-process ----------
 let pixelOn = true;
-let pixelSize = 2;
-let outlineOn = false;
+let pixelSize = 3;
+let outlineOn = true;
+let paletteOn = false;
+let ditherOn = false;
 const rt = new THREE.WebGLRenderTarget(4, 4, {
   minFilter: THREE.NearestFilter,
   magFilter: THREE.NearestFilter,
@@ -700,7 +765,10 @@ const quadMat = new THREE.ShaderMaterial({
   uniforms: {
     tDiffuse: { value: rt.texture },
     resolution: { value: new THREE.Vector2(1, 1) },
-    outline: { value: 0 },
+    outline: { value: 1 },
+    palette: { value: 0 },
+    dither: { value: 0 },
+    levels: { value: 40.0 },
   },
   vertexShader: `
     varying vec2 vUv;
@@ -710,7 +778,21 @@ const quadMat = new THREE.ShaderMaterial({
     uniform sampler2D tDiffuse;
     uniform vec2 resolution;
     uniform float outline;
+    uniform float palette;
+    uniform float dither;
+    uniform float levels;
     varying vec2 vUv;
+    float bayer4(vec2 p){
+      int x = int(mod(p.x, 4.0));
+      int y = int(mod(p.y, 4.0));
+      int idx = x + y * 4;
+      float m[16];
+      m[0]=0.;m[1]=8.;m[2]=2.;m[3]=10.;
+      m[4]=12.;m[5]=4.;m[6]=14.;m[7]=6.;
+      m[8]=3.;m[9]=11.;m[10]=1.;m[11]=9.;
+      m[12]=15.;m[13]=7.;m[14]=13.;m[15]=5.;
+      return m[idx] / 16.0;
+    }
     void main(){
       vec4 c = texture2D(tDiffuse, vUv);
       if(outline > 0.5){
@@ -719,7 +801,15 @@ const quadMat = new THREE.ShaderMaterial({
                 + length(texture2D(tDiffuse, vUv-vec2(px.x,0.)).rgb - c.rgb)
                 + length(texture2D(tDiffuse, vUv+vec2(0.,px.y)).rgb - c.rgb)
                 + length(texture2D(tDiffuse, vUv-vec2(0.,px.y)).rgb - c.rgb);
-        c.rgb = mix(c.rgb, vec3(0.08), smoothstep(0.25, 0.9, d) * 0.85);
+        c.rgb = mix(c.rgb, vec3(0.08), smoothstep(0.22, 0.85, d) * 0.9);
+      }
+      if(dither > 0.5){
+        float b = bayer4(gl_FragCoord.xy) - 0.5;
+        c.rgb += b * (1.0 / max(levels, 8.0));
+      }
+      if(palette > 0.5){
+        float lv = max(levels, 8.0);
+        c.rgb = floor(c.rgb * lv + 0.5) / lv;
       }
       gl_FragColor = c;
     }
@@ -738,9 +828,9 @@ function resizeRT() {
 
 // ---------- time of day ----------
 const TOD = {
-  day:  { bg: 0xf5f2ec, hemi: 1.45, sun: 1.35, sunCol: 0xfff8ee, hemiSky: 0xfffbf5, hemiGr: 0xb0c4d4, fog: 0 },
-  dusk: { bg: 0xdcb89c, hemi: 0.85, sun: 0.95, sunCol: 0xffa46a, hemiSky: 0xffcba6, hemiGr: 0x5c6b7e, fog: 0 },
-  night:{ bg: 0x4a607c, hemi: 1.05, sun: 0.55, sunCol: 0xc2d6f0, hemiSky: 0x7a93b0, hemiGr: 0x3a4a5e, fog: 0 },
+  day:  { bg: 0xefeee9, hemi: 1.45, sun: 1.35, sunCol: 0xfff8ee, hemiSky: 0xfffbf5, hemiGr: 0xb0c4d4, fog: 0 },
+  dusk: { bg: 0xe8e6e1, hemi: 0.95, sun: 0.95, sunCol: 0xffa46a, hemiSky: 0xffcba6, hemiGr: 0x5c6b7e, fog: 0 },
+  night:{ bg: 0xefeee9, hemi: 0.55, sun: 0.22, sunCol: 0xb0c8e8, hemiSky: 0xc5d4e4, hemiGr: 0x4a5568, fog: 0 },
 };
 let timeMode = 'day';
 let weather = 'dry';
@@ -749,7 +839,7 @@ let todBlend = 0.12; // 0 day .. 1 night
 function applyTime() {
   // map mode buttons + slider
   let t = todBlend;
-  if (timeMode === 'day') t = Math.min(t, 0.2);
+  if (timeMode === 'day') t = Math.min(t, 0.05); // pin near pure day void #EFEEE9
   if (timeMode === 'dusk') t = 0.5;
   if (timeMode === 'night') t = 1.0;
 
@@ -758,8 +848,14 @@ function applyTime() {
   if (t < 0.5) { a = day; b = dusk; f = t / 0.5; }
   else { a = dusk; b = night; f = (t - 0.5) / 0.5; }
 
-  const bg = new THREE.Color(a.bg).lerp(new THREE.Color(b.bg), f);
+  // Dex must-fix: page void stays paper light — NEVER navy/black for night
+  let bg;
+  if (timeMode === 'day') bg = new THREE.Color(0xefeee9);
+  else if (timeMode === 'night') bg = new THREE.Color(0xefeee9);
+  else bg = new THREE.Color(a.bg).lerp(new THREE.Color(b.bg), f); // dusk cool grey
   scene.background = bg;
+  document.body.style.background = '#' + bg.getHexString();
+
   hemi.intensity = a.hemi + (b.hemi - a.hemi) * f;
   hemi.color.set(a.hemiSky).lerp(new THREE.Color(b.hemiSky), f);
   hemi.groundColor.set(a.hemiGr).lerp(new THREE.Color(b.hemiGr), f);
@@ -768,63 +864,111 @@ function applyTime() {
   sun.position.set(18 - t * 10, 28 - t * 16, 10);
 
   const nightAmt = Math.max(0, (t - 0.5) / 0.5);
-  poolGlow.intensity = nightAmt * 6.5;
-  poolGlow2.intensity = nightAmt * 5.2;
-  towerSpot.intensity = nightAmt * 7.0;
-  festoon.forEach((l, i) => { l.intensity = nightAmt * (3.2 + 0.6 * Math.sin(i)); });
+
+  // Boost cyan pool + warm cabana/festoon glows at night
+  poolGlow.intensity = nightAmt * 8.5;
+  poolGlow2.intensity = nightAmt * 7.0;
+  poolGlow.color.setHex(0x67e8f9);
+  poolGlow2.color.setHex(0x5eead4);
+  towerSpot.intensity = nightAmt * 7.5;
+  festoon.forEach((l, i) => { l.intensity = nightAmt * (3.8 + 0.6 * Math.sin(i)); l.color.setHex(0xfff1c2); });
   cabanas.children.forEach(c => {
-    if (c.userData.light) c.userData.light.intensity = nightAmt * 4.0;
+    if (c.userData.light) {
+      c.userData.light.intensity = nightAmt * 5.0;
+      c.userData.light.color.setHex(0xffe8a8);
+    }
     const g = c.children.find(ch => ch.name === 'cabanaGlow');
     if (g) {
-      g.material.opacity = 0.25 + nightAmt * 0.7;
+      g.material.opacity = 0.15 + nightAmt * 0.8;
       g.material.color.setHex(0xfff1c2);
-      if (g.material.emissive) g.material.emissive.setHex(0xffd089);
-      else g.material.emissive = new THREE.Color(0xffd089);
+      if (!g.material.emissive) g.material.emissive = new THREE.Color(0xffd089);
+      g.material.emissive.setHex(0xffd089);
+      g.material.emissiveIntensity = nightAmt * 1.2;
     }
   });
-  // moon bounce + ambient floor so rock/deck stay readable (no crushed blacks)
-  fill.intensity = 0.65 + nightAmt * 1.25;
-  fill.color.set(nightAmt > 0.2 ? 0xa8daf5 : 0xc5dcff);
-  amb.intensity = 0.28 + nightAmt * 0.7;
-  amb.color.set(nightAmt > 0.3 ? 0xa8c4e0 : 0xffffff);
-  // day: soft-ish shadows via high fill; night: kill sun shadows (they crush to black)
+
+  // Water emissive bloom
+  if (waterMat.emissive) {
+    waterMat.emissive.setHex(nightAmt > 0.2 ? 0x5eead4 : 0x0a3a44);
+    waterMat.emissiveIntensity = 0.15 + nightAmt * 1.4;
+  }
+  if (deepMat.emissive) {
+    deepMat.emissive.setHex(nightAmt > 0.2 ? 0x67e8f9 : 0x0a4a55);
+    deepMat.emissiveIntensity = 0.2 + nightAmt * 1.6;
+  }
+
+  // Darken ONLY diorama meshes (island/deck/trees) — void stays light
+  club.traverse(obj => {
+    if (!obj.isMesh || !obj.userData.nightDark || !obj.material || !obj.material.color) return;
+    const base = new THREE.Color(obj.userData.baseColor);
+    const dark = base.clone().multiplyScalar(0.22).lerp(new THREE.Color(0x1a2433), 0.55);
+    obj.material.color.copy(base).lerp(dark, nightAmt);
+  });
+
+  // Cool moonlight fill — keep meshes readable without lighting the void
+  fill.intensity = 0.55 + nightAmt * 0.85;
+  fill.color.set(nightAmt > 0.2 ? 0x8eb8d8 : 0xc5dcff);
+  amb.intensity = 0.22 + nightAmt * 0.35;
+  amb.color.set(nightAmt > 0.3 ? 0x9ab0c8 : 0xffffff);
   sun.castShadow = nightAmt < 0.45;
   if (nightAmt > 0.45) {
-    hemi.intensity = Math.max(hemi.intensity, 0.95);
-    sun.intensity = Math.max(sun.intensity, 0.55);
-    sun.color.setHex(0xb0c8e8);
-    scene.background = new THREE.Color(0x455872);
+    hemi.intensity = Math.min(hemi.intensity, 0.6);
+    sun.intensity = Math.min(sun.intensity, 0.28);
+    sun.color.setHex(0xa8c0dc);
   }
-  // brand title: black ink vanishes on navy night — lighten when nightAmt high
+
+  // Brand stays #1a1a1a — remove r3 night lighten-to-white
   const brandH1 = document.querySelector('.brand h1');
   const brandP = document.querySelector('.brand p');
-  if (brandH1) brandH1.style.color = nightAmt > 0.35 ? '#f4f7fb' : '';
-  if (brandP) brandP.style.color = nightAmt > 0.35 ? '#c8d4e0' : '';
+  const eyebrow = document.querySelector('.brand .eyebrow');
+  if (brandH1) brandH1.style.color = '#1a1a1a';
+  if (brandP) brandP.style.color = '';
+  if (eyebrow) eyebrow.style.color = '#6b6b6b';
   const hintEl = document.querySelector('.hint');
-  if (hintEl) hintEl.style.color = nightAmt > 0.35 ? '#b8c4d0' : '';
+  if (hintEl) hintEl.style.color = '';
 
-  // warm deck uplights (reuse festoon beads as emissive markers)
+  // warm festoon bead emissive
   nightLights.children.forEach(ch => {
     if (ch.isMesh && ch.material && ch.material.color) {
       const hex = ch.material.color.getHex();
-      if (hex === 0xfde68a || hex === 0xffe4a3 || hex === 0xffd089) {
+      if (hex === 0xfde68a || hex === 0xffe4a3 || hex === 0xffd089 || hex === 0xffe8a8 || hex === 0xffcc66) {
         if (!ch.material.emissive) ch.material.emissive = new THREE.Color(0xffd089);
         ch.material.emissive.setHex(0xffcc66);
+        ch.material.emissiveIntensity = 0.4 + nightAmt * 1.4;
         ch.material.color.setHex(0xffe8a8);
       }
     }
   });
 
-  // weather tint
+  // weather: keep void light (soft cool tint only)
   if (weather === 'rain') {
-    scene.background.lerp(new THREE.Color(0x9aa6b2), 0.35);
-    hemi.intensity *= 0.75;
-    sun.intensity *= 0.45;
-  } else if (weather === 'snow') {
-    scene.background.lerp(new THREE.Color(0xdde3ea), 0.4);
+    scene.background.lerp(new THREE.Color(0xe4e6e8), 0.18);
     hemi.intensity *= 0.85;
     sun.intensity *= 0.55;
+  } else if (weather === 'snow') {
+    scene.background.lerp(new THREE.Color(0xf2f3f0), 0.25);
+    hemi.intensity *= 0.9;
+    sun.intensity *= 0.6;
   }
+  syncPuddles();
+}
+
+// ---------- deck puddles ----------
+const puddles = new THREE.Group();
+club.add(puddles);
+puddles.visible = false;
+const puddleSpots = [[-3, 2.2],[-5.5, 1.0],[2.5, 3.2],[4.0, -0.5],[-1.2, -4.5],[6.5, 1.8],[-7.2, 3.5],[1.0, 4.8],[8.0, -1.0],[-4.5, -2.8],[0.5, 2.8],[5.5, 3.5]];
+puddleSpots.forEach(([x, z], i) => {
+  const geo = new THREE.CircleGeometry(0.25 + (i % 3) * 0.12, 10);
+  const matP = new THREE.MeshLambertMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.55, emissive: 0x2a6a80, emissiveIntensity: 0.3 });
+  const m = new THREE.Mesh(geo, matP);
+  m.rotation.x = -Math.PI / 2;
+  m.position.set(x, 0.23, z);
+  puddles.add(m);
+});
+let puddlesWanted = false;
+function syncPuddles() {
+  puddles.visible = puddlesWanted && weather === 'rain';
 }
 
 // ---------- state / UI ----------
@@ -873,7 +1017,9 @@ document.getElementById('evSeg').addEventListener('click', e => {
   const b = e.target.closest('button[data-ev]'); if (!b) return;
   [...e.currentTarget.children].forEach(x => x.classList.toggle('on', x === b));
   document.querySelector('#scoreboard .lab').textContent =
-    b.dataset.ev === 'free' ? 'Free swim' : `Diving meet · ${b.dataset.ev}`;
+    b.dataset.ev === 'free' ? 'Free swim' : `${b.dataset.ev} platform`;
+  const diverEl = document.getElementById('scDiver');
+  if (diverEl) diverEl.textContent = b.dataset.ev === 'free' ? 'OPEN LANES' : (b.dataset.ev === '3m' ? 'TEA · 103B' : 'MIRA · 207C');
   say(b.dataset.ev === 'free' ? 'Lanes open for free swim.' : `${b.dataset.ev} event — quiet please.`);
 });
 document.getElementById('btnPause').addEventListener('click', e => {
@@ -900,13 +1046,43 @@ document.getElementById('btnRaw').addEventListener('click', () => {
   pixelOn = false; document.getElementById('btnRaw').classList.add('on');
   document.getElementById('btnPixel').classList.remove('on'); resizeRT();
 });
-document.getElementById('btnOutline').addEventListener('click', e => {
-  outlineOn = !outlineOn; e.currentTarget.classList.toggle('on', outlineOn);
+function syncFx() {
   quadMat.uniforms.outline.value = outlineOn ? 1 : 0;
+  quadMat.uniforms.palette.value = paletteOn ? 1 : 0;
+  quadMat.uniforms.dither.value = ditherOn ? 1 : 0;
+}
+document.getElementById('chkOutline').addEventListener('change', e => {
+  outlineOn = e.target.checked; syncFx();
+});
+document.getElementById('chkPalette').addEventListener('change', e => {
+  paletteOn = e.target.checked; syncFx();
+});
+document.getElementById('chkDither').addEventListener('change', e => {
+  ditherOn = e.target.checked; syncFx();
 });
 document.getElementById('pxSize').addEventListener('input', e => {
   pixelSize = Math.max(1, +e.target.value); resizeRT();
 });
+document.getElementById('chkPuddles').addEventListener('change', e => {
+  puddlesWanted = e.target.checked; syncPuddles();
+  if (puddlesWanted && weather === 'rain') say('Puddles pooling on the deck.');
+});
+document.getElementById('btnTurnL').addEventListener('click', () => {
+  const off = new THREE.Vector3().subVectors(camera.position, controls.target);
+  off.applyAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(15));
+  camera.position.copy(controls.target).add(off);
+  controls.update();
+});
+document.getElementById('btnTurnR').addEventListener('click', () => {
+  const off = new THREE.Vector3().subVectors(camera.position, controls.target);
+  off.applyAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(-15));
+  camera.position.copy(controls.target).add(off);
+  controls.update();
+});
+document.getElementById('btnHow').addEventListener('click', () => {
+  say('Nearest-neighbour pixel RT · optional 40-colour palette + Bayer dither · edge outlines.');
+});
+syncFx();
 
 // click water → splash
 const ray = new THREE.Raycaster();
@@ -1092,7 +1268,7 @@ function frame() {
   controls.autoRotate = autoOrbit && !paused;
   controls.update();
 
-  if (pixelOn || outlineOn) {
+  if (pixelOn || outlineOn || paletteOn || ditherOn) {
     renderer.setRenderTarget(rt);
     renderer.render(scene, camera);
     renderer.setRenderTarget(null);
@@ -1126,7 +1302,12 @@ syncPanelForViewport();
 window.DEEPEND = {
   setTime(m) { timeMode = m; todBlend = m === 'day' ? 0.12 : m === 'dusk' ? 0.5 : 0.88; applyTime(); },
   setWeather(w) { weather = w; wxPts.visible = w !== 'dry'; applyTime(); },
-  state: () => ({ timeMode, weather, paused, speed, pixelOn, autoOrbit, pixelSize, panelCollapsed: panelEl.classList.contains('collapsed') }),
+  state: () => ({
+    timeMode, weather, paused, speed, pixelOn, autoOrbit, pixelSize, outlineOn, paletteOn, ditherOn,
+    puddles: puddlesWanted, panelCollapsed: panelEl.classList.contains('collapsed'),
+    bg: '#' + new THREE.Color(scene.background).getHexString(),
+    brandColor: getComputedStyle(document.querySelector('.brand h1')).color,
+  }),
   splash: (x, z) => spawnSplash(x, 0.35, z, 12),
 };
 </script>
